@@ -1,6 +1,7 @@
 #ifndef KONDUIT_INSTALLER_COMPONENTS_HPP
 #define KONDUIT_INSTALLER_COMPONENTS_HPP
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include "main.hpp"
@@ -12,6 +13,17 @@ struct ProgressItems {
 };
 
 bool button(std::string text, Vector2 size = {80, 30});
+
+struct InputState {
+    std::string name;
+    Vector2 size;
+    std::string* input;
+    size_t cursor_pos;
+    bool cursor_moving;
+    double last_blink;
+    bool blink;
+    bool selected;
+};
 
 bool text_input(
     std::string label,

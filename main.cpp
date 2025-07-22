@@ -1,6 +1,6 @@
 #include "main.hpp"
 #include "components.hpp"
-#include "include/raylib/clay_renderer_raylib.c"
+#include "include/raylib/clay_renderer_raylib.h"
 
 ClayMan* g_clayManInstance = nullptr;
 
@@ -60,38 +60,6 @@ void input() {
         Clay_SetDebugModeEnabled(!Clay_IsDebugModeEnabled());
     }
 }
-
-// I can revisit this if I add bold fonts
-// void text_outline(
-//     const std::string& text,
-//     const Clay_TextElementConfig textElementConfig) {
-//     auto base_id = clay.hashID(std::format("text_base_{}", text));
-//     auto outline_id = clay.hashID(std::format("text_outline_{}", text));
-//     clay.element(
-//         {
-//             .id = base_id,
-//         },
-//         [&] { clay.textElement(text, textElementConfig); });
-//     clay.element(
-//         {.id = outline_id,
-//          .floating =
-//              {.offset = {0, 0},
-//               .parentId = base_id.id,
-//               .zIndex = -1,
-//               .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID}},
-//         [&] {
-//             clay.textElement(
-//                 text,
-//                 {.userData = textElementConfig.userData,
-//                  .textColor = K_BLACK,
-//                  .fontId = textElementConfig.fontId,
-//                  .fontSize = textElementConfig.fontSize,
-//                  .letterSpacing = textElementConfig.letterSpacing,
-//                  .lineHeight = textElementConfig.lineHeight,
-//                  .wrapMode = textElementConfig.wrapMode,
-//                  .textAlignment = textElementConfig.textAlignment});
-//         });
-// }
 
 void debug_ui() {
     auto debug_string = std::format("FPS {}", GetFPS());
@@ -230,7 +198,7 @@ void installer_ui() {
 void ui() {
     // only used for corner rounding
     clay.element(
-        {
+        Clay_ElementDeclaration{
             .id = clay.hashID("root_container"),
             .layout =
                 {.sizing = clay.expandXY(),
@@ -270,14 +238,16 @@ int main() {
         nullptr,
         400
     );
-    SetTextureFilter(fonts[0].texture, TEXTURE_FILTER_BILINEAR);
+    GenTextureMipmaps(&fonts[0].texture);
+    SetTextureFilter(fonts[0].texture, TEXTURE_FILTER_TRILINEAR);
     fonts[1] = LoadFontEx(
         "D:/github/konduit_installer/assets/Roboto-Regular.ttf",
         18,
         nullptr,
         400
     );
-    SetTextureFilter(fonts[1].texture, TEXTURE_FILTER_BILINEAR);
+    GenTextureMipmaps(&fonts[1].texture);
+    SetTextureFilter(fonts[1].texture, TEXTURE_FILTER_TRILINEAR);
     //    int codepoints[2] = {0xf2b9, 0xf640};
     //    fonts[2] = LoadFontEx(
     //        "D:/github/konduit_installer/assets/Font Awesome 6 "
@@ -332,6 +302,6 @@ int main() {
     for (const auto& font : fonts) {
         UnloadFont(font);
     }
-    CloseWindow();
+    Clay_Raylib_Close();
     return 0;
 }

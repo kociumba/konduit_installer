@@ -5,75 +5,45 @@
 #include <functional>
 #include <iostream>
 // #include <mutex>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
+#include "main.hpp"
 
-inline Clay_Sizing center_percent() {
-    return Clay_Sizing{
-        .width = {.size = {.percent = 0.5}, .type = CLAY__SIZING_TYPE_PERCENT},
-        .height = {.size = {.percent = 0.5}, .type = CLAY__SIZING_TYPE_PERCENT},
-    };
-}
+Clay_Sizing center_percent();
 
-class Debouncer {
-   public:
-    explicit Debouncer(long long initial_delay_ms, long long repeat_interval_ms)
-        : initial_delay_(std::chrono::milliseconds(initial_delay_ms)),
-          repeat_interval_(std::chrono::milliseconds(repeat_interval_ms)),
-          current_interval_(initial_delay_),
-          last_trigger_time_(std::chrono::steady_clock::time_point::min()),
-          first_action_made_(false),
-          triggered_count_(0) {
-        if (initial_delay_ms < 0 || repeat_interval_ms < 0) {
-            throw std::invalid_argument("Delays must be non-negative");
-        }
-    }
+struct DebounceState {
+    std::chrono::milliseconds initial_delay;
+    std::chrono::milliseconds repeat_interval;
+    std::chrono::milliseconds current_interval;
+    std::chrono::steady_clock::time_point last_trigger_time;
+    bool first_action_made;
+    long long triggered_count;
 
-    void reset() {
-        current_interval_ = initial_delay_;
-        last_trigger_time_ = std::chrono::steady_clock::time_point::min();
-        first_action_made_ = false;
-        triggered_count_ = 0;
-    }
-
-    [[nodiscard]] long long count() const { return triggered_count_; }
-
-    bool throttle(const std::function<void()>& action) {
-        auto now = std::chrono::steady_clock::now();
-
-        if (last_trigger_time_ ==
-            std::chrono::steady_clock::time_point::min()) {
-            action();
-            last_trigger_time_ = now;
-            triggered_count_++;
-            first_action_made_ = true;
-            return true;
-        }
-
-        if (now - last_trigger_time_ >= current_interval_) {
-            action();
-            last_trigger_time_ = now;
-            triggered_count_++;
-
-            if (first_action_made_ && triggered_count_ == 2) {
-                current_interval_ = repeat_interval_;
-            }
-            return true;
-        }
-        return false;
-    }
-
-   private:
-    std::chrono::milliseconds initial_delay_;
-    std::chrono::milliseconds repeat_interval_;
-    std::chrono::milliseconds current_interval_;
-    std::chrono::steady_clock::time_point last_trigger_time_;
-    bool first_action_made_;
-    long long triggered_count_;
+    DebounceState(long long init_ms, long long repeat_ms)
+        : initial_delay(init_ms),
+          repeat_interval(repeat_ms),
+          current_interval(init_ms),
+          last_trigger_time(std::chrono::steady_clock::time_point::min()),
+          first_action_made(false),
+          triggered_count(0) {}
 };
+
+static std::unordered_map<std::string, DebounceState>& get_debounce_states();
+
+bool debounce_action(
+    const std::string& id,
+    const std::function<void()>& action,
+    long long initial_delay_ms = 200,
+    long long repeat_interval_ms = 25
+);
+
+void reset_debounce(const std::string& id);
+
+long long get_debounce_count(const std::string& id);
 
 struct DirectoryValidationResult {
     bool exists_and_is_dir = false;
@@ -82,85 +52,163 @@ struct DirectoryValidationResult {
     std::string error_message;
 };
 
-inline bool
-is_directory_empty(const std::filesystem::path& p, std::error_code& ec) {
-    auto begin = std::filesystem::directory_iterator(p, ec);
-    if (ec) {
-        return false;
-    }
-    return begin == std::filesystem::directory_iterator{};
+bool is_directory_empty(const std::filesystem::path& p, std::error_code& ec);
+
+DirectoryValidationResult validate_path(const std::string& path_str);
+
+static inline Color to_raylib_color(const Clay_Color& clayColor) {
+    return {
+        static_cast<unsigned char>(clayColor.r),
+        static_cast<unsigned char>(clayColor.g),
+        static_cast<unsigned char>(clayColor.b),
+        static_cast<unsigned char>(clayColor.a)
+    };
 }
 
-inline DirectoryValidationResult validate_path(const std::string& path_str) {
-    DirectoryValidationResult result;
+enum class TransitionType { BINARY, MULTI };
 
-    if (path_str.empty() ||
-        path_str.find_first_not_of(" \t\r\n") == std::string::npos) {
-        result.error_message = "path is empty or contains only whitespace.";
-        result.usable = false;
-        return result;
-    }
+struct ColorCondition {
+    bool condition;
+    Clay_Color color;
+};
 
-    std::filesystem::path p(path_str);
-    std::error_code ec;
+struct ColorTransitionState {
+    TransitionType type;
+    float duration;
+    float progress;
+    bool isTransitioning;
+    Clay_Color currentColor;
+    Clay_Color sourceColor;
+    Clay_Color targetColor;
 
-    if (!p.is_absolute()) {
-        result.error_message =
-            "path must be absolute, relative paths are not allowed.";
-        result.usable = false;
-        return result;
-    }
+    bool lastCondition;
+    Clay_Color trueColor;
+    Clay_Color falseColor;
 
-    bool path_exists = std::filesystem::exists(p, ec);
-    if (ec) {
-        result.error_message =
-            std::format("error checking path existence: {}", ec.message());
-        result.usable = false;
-        return result;
-    }
+    std::vector<ColorCondition> conditions;
+    Clay_Color defaultColor;
 
-    if (path_exists) {
-        bool is_dir = std::filesystem::is_directory(p, ec);
-        if (ec) {
-            result.error_message = std::format(
-                "error checking if path is a directory: {}", ec.message()
-            );
-            result.usable = false;
-            return result;
-        }
+    explicit ColorTransitionState(
+        float dur,
+        TransitionType t = TransitionType::BINARY
+    )
+        : type(t),
+          duration(dur),
+          progress(0.0f),
+          isTransitioning(false),
+          currentColor({0.0f, 0.0f, 0.0f, 255.0f}),
+          sourceColor({0.0f, 0.0f, 0.0f, 255.0f}),
+          targetColor({0.0f, 0.0f, 0.0f, 255.0f}),
+          lastCondition(false) {}
+};
 
-        if (is_dir) {
-            result.exists_and_is_dir = true;
+static std::unordered_map<std::string, ColorTransitionState>&
+get_color_states();
 
-            bool is_empty = is_directory_empty(p, ec);
-            if (ec) {
-                result.error_message = std::format(
-                    "error checking if directory is empty: {}", ec.message()
-                );
-                result.usable = false;
-                return result;
-            }
-            result.empty_initially = is_empty;
-            if (is_empty) {
-                result.usable = true;
-            } else {
-                result.usable = false;
-                result.error_message =
-                    "directory exists but is not empty. cannot proceed.";
-            }
-        } else {
-            result.error_message =
-                "path exists but is not a directory. cannot proceed.";
-            result.usable = false;
-            return result;
-        }
-    } else {
-        result.exists_and_is_dir = false;
-        result.empty_initially = true;
-        result.usable = true;
-    }
+Clay_Color color_transition(
+    const std::string& id,
+    bool condition,
+    const Clay_Color& trueColor,
+    const Clay_Color& falseColor,
+    float duration = 0.15f
+);
 
-    return result;
-}
+Clay_Color color_transition(
+    const std::string& id,
+    const std::vector<ColorCondition>& conditions,
+    const Clay_Color& defaultColor,
+    float duration = 0.15f
+);
+
+void reset_color_transition(const std::string& id);
+
+struct FloatCondition {
+    bool condition;
+    float value;
+};
+
+struct IntCondition {
+    bool condition;
+    int value;
+};
+
+struct ValueTransitionState {
+    TransitionType type;
+    float duration;
+    float progress;
+    bool isTransitioning;
+
+    union {
+        float currentFloat;
+        int currentInt;
+    };
+
+    union {
+        float sourceFloat;
+        int sourceInt;
+    };
+
+    union {
+        float targetFloat;
+        int targetInt;
+    };
+
+    // Binary-specific
+    bool lastCondition;
+    float trueFloat;
+    float falseFloat;
+    int trueInt;
+    int falseInt;
+
+    // Multi-specific
+    std::vector<FloatCondition> floatConditions;
+    float defaultFloat;
+    std::vector<IntCondition> intConditions;
+    int defaultInt;
+
+    explicit ValueTransitionState(float dur, TransitionType t)
+        : type(t),
+          duration(dur),
+          progress(0.0f),
+          isTransitioning(false),
+          lastCondition(false) {}
+};
+
+static std::unordered_map<std::string, ValueTransitionState>&
+get_value_states();
+
+float lerp_float(float a, float b, float t);
+
+int lerp_int(int a, int b, float t);
+
+float float_transition(
+    const std::string& id,
+    bool condition,
+    float trueVal,
+    float falseVal,
+    float duration = 0.15f
+);
+
+int int_transition(
+    const std::string& id,
+    bool condition,
+    int trueVal,
+    int falseVal,
+    float duration = 0.15f
+);
+
+float float_transition(
+    const std::string& id,
+    const std::vector<FloatCondition>& conditions,
+    float defaultVal,
+    float duration = 0.15f
+);
+
+int int_transition(
+    const std::string& id,
+    const std::vector<IntCondition>& conditions,
+    int defaultVal,
+    float duration = 0.15f
+);
 
 #endif  // KONDUIT_INSTALLER_UTILS_HPP

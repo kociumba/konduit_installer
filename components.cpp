@@ -1,7 +1,7 @@
 #include "components.hpp"
 
 bool button(std::string text, Vector2 size) {
-    auto name = std::format("{}_button", text);
+    std::string name = std::format("{}_button", text);
     clay.element(
         {.id = clay.hashID(name),
          .layout =
@@ -10,10 +10,14 @@ bool button(std::string text, Vector2 size) {
                  .childAlignment =
                      {.x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER},
              },
-         .backgroundColor = clay.pointerOver(name) ? MAIN_COLOR : MAIN_DARK,
+         .backgroundColor = color_transition(
+             name + "_bg", clay.pointerOver(name), MAIN_COLOR, MAIN_DARK
+         ),
          .cornerRadius = {4, 4, 4, 4},
          .border =
-             {.color = clay.pointerOver(name) ? BORDER_LIGHT : BORDER_GRAY,
+             {.color = color_transition(
+                  name, clay.pointerOver(name), BORDER_LIGHT, BORDER_GRAY
+              ),
               .width = {1, 1, 1, 1}}},
         [&] {
             clay.textElement(
@@ -31,23 +35,9 @@ bool button(std::string text, Vector2 size) {
     return false;
 }
 
-std::map<std::string, bool> active;
+static std::map<std::string, bool> active;
 
-struct InputState {
-    std::string name;
-    Vector2 size;
-    std::string* input;
-    size_t cursor_pos;
-    bool cursor_moving;
-    double last_blink;
-    bool blink;
-};
-
-std::map<std::string, InputState> states;
-
-Debouncer backspace_debouncer(200, 25);
-Debouncer left_debouncer(200, 25);
-Debouncer right_debouncer(200, 25);
+static std::map<std::string, InputState> states;
 
 bool text_input(std::string label, std::string* input, Vector2 size) {
     auto name = std::format("{}_input", label);
@@ -61,6 +51,7 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
         state.cursor_pos = input->length();
         state.last_blink = GetTime();
         state.blink = true;
+        state.selected = false;
     }
 
     std::string text_to_cursor = input->substr(0, state.cursor_pos);
@@ -93,7 +84,12 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
                                 {.x = CLAY_ALIGN_X_LEFT,
                                  .y = CLAY_ALIGN_Y_CENTER},
                         },
-                    .backgroundColor = TEXT_DARK,
+                    .backgroundColor = color_transition(
+                        name + "_bg",
+                        {{active[name], MAIN_DARK},
+                         {clay.pointerOver(name), MAIN_DARK}},
+                        TEXT_DARK
+                    ),
                     .cornerRadius = {4, 4, 4, 4},
                     .clip =
                         {
@@ -101,10 +97,12 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
                             .vertical = true,
                         },
                     .border =
-                        {.color = active[name]
-                                      ? MAIN_COLOR
-                                      : (clay.pointerOver(name) ? BORDER_LIGHT
-                                                                : BORDER_GRAY),
+                        {.color = color_transition(
+                             name,
+                             {{active[name], MAIN_COLOR},
+                              {clay.pointerOver(name), BORDER_LIGHT}},
+                             BORDER_GRAY
+                         ),
                          .width = {1, 1, 1, 1, 0}},
                 },
                 [&] {
@@ -117,7 +115,7 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
 
                         clay.element({
                             .id = clay.hashID(std::format("{}_cursor", name)),
-                            .layout = {.sizing = clay.fixedSize(2, 18)},
+                            .layout = {.sizing = clay.fixedSize(1, 18)},
                             .backgroundColor =
                                 state.cursor_moving
                                     ? K_WHITE
@@ -137,6 +135,13 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
                     clay.element(
                         {
                             .id = clay.hashID(std::format("{}_text", name)),
+                            .backgroundColor = color_transition(
+                                name + "_text",
+                                state.selected,
+                                MAIN_COLOR,
+                                TRANSPARENT,
+                                0.1
+                            ),
                             .floating =
                                 {.offset =
                                      {scroll_offset + 4,
@@ -168,6 +173,7 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
         state.last_blink = GetTime();
     }
     if (!clay.pointerOver(name) && clay.mousePressed()) {
+        state.selected = false;
         active[name] = false;
     }
 
@@ -175,6 +181,7 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
         auto key = GetCharPressed();
         while (key > 0) {
             if (key >= 32 && key <= 126) {
+                state.selected = false;
                 input->insert(state.cursor_pos, 1, (char)key);
                 state.cursor_pos++;
             }
@@ -182,18 +189,25 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
         }
     }
 
+    if (IsKeyPressed(KEY_BACKSPACE) && state.selected) {
+        input->clear();
+        state.cursor_pos = 0;
+        state.selected = false;
+    }
     if (IsKeyDown(KEY_BACKSPACE) && state.cursor_pos > 0) {
-        backspace_debouncer.throttle([&] {
+        state.selected = false;
+        debounce_action(name + "backspace", [&] {
             input->erase(state.cursor_pos - 1, 1);
             state.cursor_pos--;
         });
     }
     if (IsKeyReleased(KEY_BACKSPACE)) {
-        backspace_debouncer.reset();
+        reset_debounce(name + "backspace");
     }
 
     if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
         if (IsKeyPressed(KEY_BACKSPACE) && state.cursor_pos > 0) {
+            state.selected = false;
             size_t lastSpace =
                 input->find_last_not_of(" \t\n\r", state.cursor_pos - 1);
             if (lastSpace != std::string::npos) {
@@ -212,24 +226,70 @@ bool text_input(std::string label, std::string* input, Vector2 size) {
                 state.cursor_pos = 0;
             }
         }
+
+        if (IsKeyPressed(KEY_A) && !input->empty()) {
+            state.selected = true;
+            state.cursor_pos = input->length();
+        }
+
+        if (IsKeyPressed(KEY_C) && state.selected) {
+            SetClipboardText(input->c_str());
+            state.selected = false;
+        }
+
+        if (IsKeyPressed(KEY_V) && state.selected) {
+            auto t = GetClipboardText();
+            if (t) {
+                state.cursor_pos =
+                    std::clamp(state.cursor_pos, (size_t)0, strlen(t));
+                *input = t;
+                state.selected = false;
+            }
+        }
+
+        if (IsKeyPressed(KEY_V)) {
+            auto t = GetClipboardText();
+            if (t) {
+                input->insert(state.cursor_pos, t);
+                state.cursor_pos += strlen(t);
+            }
+        }
     }
 
     if (IsKeyDown(KEY_LEFT) && state.cursor_pos > 0) {
         state.cursor_moving = true;
-        left_debouncer.throttle([&] { state.cursor_pos--; });
+        debounce_action(name + "left", [&] { state.cursor_pos--; });
     }
     if (IsKeyReleased(KEY_LEFT)) {
         state.cursor_moving = false;
-        left_debouncer.reset();
+        reset_debounce(name + "left");
     }
 
     if (IsKeyDown(KEY_RIGHT) && state.cursor_pos < input->length()) {
         state.cursor_moving = true;
-        right_debouncer.throttle([&] { state.cursor_pos++; });
+        debounce_action(name + "right", [&] { state.cursor_pos++; });
     }
     if (IsKeyReleased(KEY_RIGHT)) {
         state.cursor_moving = false;
-        right_debouncer.reset();
+        reset_debounce(name + "right");
+    }
+
+    if (IsKeyPressed(KEY_DOWN) && state.cursor_pos > 0) {
+        state.cursor_moving = true;
+        state.cursor_pos = 0;
+    }
+
+    if (IsKeyReleased(KEY_DOWN)) {
+        state.cursor_moving = false;
+    }
+
+    if (IsKeyPressed(KEY_UP) && state.cursor_pos < input->length()) {
+        state.cursor_moving = true;
+        state.cursor_pos = input->length();
+    }
+
+    if (IsKeyReleased(KEY_UP)) {
+        state.cursor_moving = false;
     }
 
     if (active[name] && IsKeyPressed(KEY_ENTER)) {
@@ -330,14 +390,20 @@ bool checkbox(std::string label, bool* toggle) {
                          .childAlignment =
                              {.x = CLAY_ALIGN_X_CENTER,
                               .y = CLAY_ALIGN_Y_CENTER}},
-                    .backgroundColor = clay.pointerOver(clickable_name)
-                                           ? MAIN_DARK
-                                           : TEXT_DARK,
+                    .backgroundColor = color_transition(
+                        clickable_name + "_bg",
+                        clay.pointerOver(clickable_name),
+                        MAIN_DARK,
+                        TEXT_DARK
+                    ),
                     .cornerRadius = {4, 4, 4, 4},
                     .border =
-                        {.color = clay.pointerOver(clickable_name)
-                                      ? BORDER_LIGHT
-                                      : BORDER_GRAY,
+                        {.color = color_transition(
+                             clickable_name,
+                             clay.pointerOver(clickable_name),
+                             BORDER_LIGHT,
+                             BORDER_GRAY
+                         ),
                          .width = {1, 1, 1, 1, 0}},
                 },
                 [&] {
@@ -346,10 +412,31 @@ bool checkbox(std::string label, bool* toggle) {
                             .id = clay.hashID(
                                 std::format("{}_clicked", clickable_name)
                             ),
-                            .layout = {.sizing = clay.fixedSize(20, 20)},
-                            .backgroundColor =
-                                *toggle ? MAIN_COLOR : TRANSPARENT,
-                            .cornerRadius = {4, 4, 4, 4},
+                            .layout =
+                                {.sizing = clay.fixedSize(
+                                     int_transition(
+                                         clickable_name + "_clicked" + "_w",
+                                         *toggle,
+                                         20,
+                                         1,
+                                         0.1
+                                     ),
+                                     int_transition(
+                                         clickable_name + "_clicked" + "_h",
+                                         *toggle,
+                                         20,
+                                         1,
+                                         0.1
+                                     )
+                                 )},
+                            .backgroundColor = color_transition(
+                                clickable_name + "_clicked",
+                                *toggle,
+                                MAIN_COLOR,
+                                TRANSPARENT,
+                                0.15
+                            ),
+                            .cornerRadius = {6, 6, 6, 6},
                         },
                         [&] {}
                     );
@@ -365,9 +452,42 @@ bool checkbox(std::string label, bool* toggle) {
     );
 
     if (clay.pointerOver(clickable_name) && clay.mousePressed()) {
+        drag_window = false;
         *toggle = !*toggle;
         return true;
     }
 
     return false;
 }
+
+// I can revisit this if I add bold fonts
+// void text_outline(
+//     const std::string& text,
+//     const Clay_TextElementConfig textElementConfig) {
+//     auto base_id = clay.hashID(std::format("text_base_{}", text));
+//     auto outline_id = clay.hashID(std::format("text_outline_{}", text));
+//     clay.element(
+//         {
+//             .id = base_id,
+//         },
+//         [&] { clay.textElement(text, textElementConfig); });
+//     clay.element(
+//         {.id = outline_id,
+//          .floating =
+//              {.offset = {0, 0},
+//               .parentId = base_id.id,
+//               .zIndex = -1,
+//               .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID}},
+//         [&] {
+//             clay.textElement(
+//                 text,
+//                 {.userData = textElementConfig.userData,
+//                  .textColor = K_BLACK,
+//                  .fontId = textElementConfig.fontId,
+//                  .fontSize = textElementConfig.fontSize,
+//                  .letterSpacing = textElementConfig.letterSpacing,
+//                  .lineHeight = textElementConfig.lineHeight,
+//                  .wrapMode = textElementConfig.wrapMode,
+//                  .textAlignment = textElementConfig.textAlignment});
+//         });
+// }
