@@ -71,25 +71,27 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
         target_link_options(konduit_installer PRIVATE "/LTCG" "/OPT:REF" "/OPT:ICF" "/INCREMENTAL:NO")
         target_link_options(konduit_installer PRIVATE "/SUBSYSTEM:WINDOWS")
     else ()
+        target_compile_options(konduit_installer PRIVATE "-O2" "-g0")
         target_link_options(konduit_installer PRIVATE -mwindows)
         target_link_options(konduit_installer PRIVATE -flto)
-        set_target_properties(konduit_installer PROPERTIES
-                LINK_FLAGS_RELEASE "-Wl,--strip-all"
-                CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g0"
-                CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g0"
-                CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2"
-                CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2"
-        )
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            set_target_properties(konduit_installer PROPERTIES
+                    LINK_FLAGS_RELEASE "-Wl,--strip-all"
+            )
+        elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|IntelLLVM")
+            set_target_properties(konduit_installer PROPERTIES
+                    LINK_FLAGS_RELEASE "-Wl,-S"
+            )
+        endif ()
     endif ()
-endif ()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    if (MSVC)
-        target_compile_options(konduit_installer PRIVATE "/Od" "/Zi" "/RTC1")
-        target_link_options(konduit_installer PRIVATE "/DEBUG" "/INCREMENTAL")
-        #        target_link_options(konduit_installer PRIVATE "/SUBSYSTEM:CONSOLE")
-    else ()
-        #        target_link_options(konduit_installer PRIVATE -mconsole -e main)
-        target_link_options(konduit_installer PRIVATE -Wl,--Map=${CMAKE_PROJECT_NAME}.map)
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        if (MSVC)
+            target_compile_options(konduit_installer PRIVATE "/Od" "/Zi" "/RTC1")
+            target_link_options(konduit_installer PRIVATE "/DEBUG" "/INCREMENTAL")
+            #        target_link_options(konduit_installer PRIVATE "/SUBSYSTEM:CONSOLE")
+        else ()
+            #        target_link_options(konduit_installer PRIVATE -mconsole -e main)
+            target_link_options(konduit_installer PRIVATE -Wl,--Map=${CMAKE_PROJECT_NAME}.map)
+        endif ()
     endif ()
-endif ()
