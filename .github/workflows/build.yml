@@ -21,12 +21,13 @@ jobs:
                 if: runner.os == 'Linux'
                 run: |
                     sudo apt update
-                    sudo apt install -y cmake ninja-build g++ libgl1-mesa-dev libx11-dev
+                    sudo apt install -y cmake ninja-build g++ libgl1-mesa-dev libx11-dev libxrandr-dev
 
             -   name: Set up dependencies (macOS)
                 if: runner.os == 'macOS'
                 run: |
-                    brew install cmake ninja
+                    brew install cmake ninja llvm
+                    echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
             -   name: Set up MSYS2 with MinGW and Ninja (Windows)
                 if: runner.os == 'Windows'
@@ -42,6 +43,10 @@ jobs:
             -   name: Configure (Linux/macOS)
                 if: runner.os != 'Windows'
                 run: |
+                    if [ "${{ runner.os }}" = "macOS" ]; then
+                        export CC=/opt/homebrew/opt/llvm/bin/clang
+                        export CXX=/opt/homebrew/opt/llvm/bin/clang++
+                    fi
                     cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
             -   name: Build (Linux/macOS)
