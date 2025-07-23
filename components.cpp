@@ -460,8 +460,9 @@ bool checkbox(std::string label, bool* toggle) {
     return false;
 }
 
-// I can revisit this if I add bold fonts
-// void text_outline(
+// the idea for this is solid, but I would need to load fonts at higher weight
+// keeping it for later, maybe
+// to do this properly void text_outline(
 //     const std::string& text,
 //     const Clay_TextElementConfig textElementConfig) {
 //     auto base_id = clay.hashID(std::format("text_base_{}", text));

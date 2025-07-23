@@ -232,32 +232,23 @@ int main() {
             FLAG_WINDOW_TRANSPARENT | FLAG_VSYNC_HINT
     );
 
-    fonts[0] = LoadFontEx(
-        "D:/github/konduit_installer/assets/Roboto-Regular.ttf",
-        24,
-        nullptr,
-        400
+    fonts[0] = LoadFontFromMemory(
+        ".ttf", roboto_font, roboto_font_size, 24, nullptr, 400
     );
     GenTextureMipmaps(&fonts[0].texture);
     SetTextureFilter(fonts[0].texture, TEXTURE_FILTER_TRILINEAR);
-    fonts[1] = LoadFontEx(
-        "D:/github/konduit_installer/assets/Roboto-Regular.ttf",
-        18,
-        nullptr,
-        400
+    fonts[1] = LoadFontFromMemory(
+        ".ttf", roboto_font, roboto_font_size, 18, nullptr, 400
     );
     GenTextureMipmaps(&fonts[1].texture);
     SetTextureFilter(fonts[1].texture, TEXTURE_FILTER_TRILINEAR);
-    //    int codepoints[2] = {0xf2b9, 0xf640};
-    //    fonts[2] = LoadFontEx(
-    //        "D:/github/konduit_installer/assets/Font Awesome 6 "
-    //        "Free-Regular-400.otf",
-    //        100,
-    //        codepoints,
-    //        2
-    //    );
-    //    SetTextureFilter(fonts[2].texture, TEXTURE_FILTER_BILINEAR);
-    //
+    int codepoints[2] = {0xf2b9, 0xf640};
+    fonts[2] = LoadFontFromMemory(
+        ".ttf", fa_icon_font, fa_icon_font_size, 100, codepoints, 2
+    );
+    GenTextureMipmaps(&fonts[1].texture);
+    SetTextureFilter(fonts[2].texture, TEXTURE_FILTER_TRILINEAR);
+
     //    ExportImage(LoadImageFromTexture(fonts[2].texture), "fa_font_18.png");
 
     auto m = GetCurrentMonitor();

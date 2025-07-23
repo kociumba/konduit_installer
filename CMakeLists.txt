@@ -3,7 +3,7 @@ project(konduit_installer LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -31,7 +31,9 @@ set(C_SOURCES include/tinyfiledialogs/tinyfiledialogs.c
         include/raylib/clay_renderer_raylib.c
         include/raylib/rres_impl.c
         include/lz4/lz4.c
-        include/raylib/rres-raylib_impl.c)
+        include/raylib/rres-raylib_impl.c
+        embed.h
+        embed.c)
 set(CXX_SOURCES main.cpp
         main.hpp
         clayman.cpp

@@ -5,6 +5,7 @@
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <format>
 #include "clayman.hpp"
+#include "embed.h"
 #include "raylib.h"
 
 #define ce constexpr
