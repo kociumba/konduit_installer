@@ -495,3 +495,20 @@ int int_transition(
 
     return state.currentInt;
 }
+
+uint32_t codepoint(const char* str) {
+    const auto* s = (const unsigned char*)str;
+
+    if ((s[0] & 0xF8) == 0xF0) {
+        return ((s[0] & 0x07) << 18) | ((s[1] & 0x3F) << 12) |
+               ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
+    } else if ((s[0] & 0xF0) == 0xE0) {
+        return ((s[0] & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+    } else if ((s[0] & 0xE0) == 0xC0) {
+        return ((s[0] & 0x1F) << 6) | (s[1] & 0x3F);
+    } else if ((s[0] & 0x80) == 0x00) {
+        return s[0];
+    }
+
+    return 0xFFFD;
+}

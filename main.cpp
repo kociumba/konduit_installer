@@ -219,6 +219,10 @@ void ui() {
 }
 
 Font fonts[3];
+std::vector<uint32_t> icon_codepoints = {
+    codepoint(ICON_FA_FOLDER),
+    codepoint(ICON_FA_EYE),
+};
 
 int main() {
     g_clayManInstance =
@@ -242,14 +246,20 @@ int main() {
     );
     GenTextureMipmaps(&fonts[1].texture);
     SetTextureFilter(fonts[1].texture, TEXTURE_FILTER_TRILINEAR);
-    int codepoints[2] = {0xf2b9, 0xf640};
     fonts[2] = LoadFontFromMemory(
-        ".ttf", fa_icon_font, fa_icon_font_size, 100, codepoints, 2
+        ".ttf",
+        fa_icon_font,
+        fa_icon_font_size,
+        24,
+        (int*)(icon_codepoints.data()),
+        icon_codepoints.size()
     );
-    GenTextureMipmaps(&fonts[1].texture);
+    GenTextureMipmaps(&fonts[2].texture);
     SetTextureFilter(fonts[2].texture, TEXTURE_FILTER_TRILINEAR);
 
-    //    ExportImage(LoadImageFromTexture(fonts[2].texture), "fa_font_18.png");
+    std::printf("eye: U+%04X\n", codepoint(ICON_FA_EYE));
+
+    ExportImage(LoadImageFromTexture(fonts[2].texture), "fa_font_18.png");
 
     auto m = GetCurrentMonitor();
     auto m_w = GetMonitorWidth(m);

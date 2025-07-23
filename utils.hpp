@@ -211,4 +211,6 @@ int int_transition(
     float duration = 0.15f
 );
 
+uint32_t codepoint(const char* str);
+
 #endif  // KONDUIT_INSTALLER_UTILS_HPP

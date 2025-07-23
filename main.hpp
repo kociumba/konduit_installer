@@ -2,6 +2,7 @@
 #define KONDUIT_INSTALLER_MAIN_HPP
 
 // #include <raylib/rres.h>
+#include <IconsFontAwesome6.h>
 #include <tinyfiledialogs/tinyfiledialogs.h>
 #include <format>
 #include "clayman.hpp"
@@ -35,8 +36,7 @@ ce Clay_Color SECONDARY_BG = {40, 40, 40, 230};
 
 ce int FONT_SIZE_24_ID = 0;
 ce int FONT_SIZE_18_ID = 1;
-// constexpr int FONT_FA_ICONS_ID = 2;
-//  constexpr int FONT_SIZE_16_ID = 2;
+ce int FONT_FA_ICONS_ID = 2;
 
 #endif  // KONDUIT_INSTALLER_MAIN_HPP
 
