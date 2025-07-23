@@ -257,9 +257,9 @@ int main() {
     GenTextureMipmaps(&fonts[2].texture);
     SetTextureFilter(fonts[2].texture, TEXTURE_FILTER_TRILINEAR);
 
-    std::printf("eye: U+%04X\n", codepoint(ICON_FA_EYE));
+    //    std::printf("eye: U+%04X\n", codepoint(ICON_FA_EYE));
 
-    ExportImage(LoadImageFromTexture(fonts[2].texture), "fa_font_18.png");
+    //    ExportImage(LoadImageFromTexture(fonts[2].texture), "fa_font_18.png");
 
     auto m = GetCurrentMonitor();
     auto m_w = GetMonitorWidth(m);
