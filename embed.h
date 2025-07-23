@@ -3,6 +3,34 @@
 
 #include <stddef.h>
 
+#ifndef __has_embed
+#define TO_STRING(x) #x
+#define STRINGIFY(x) TO_STRING(x)
+
+#if defined(__clang__)
+#define COMPILER_INFO                                  \
+    "Clang " STRINGIFY(__clang_major__) "." STRINGIFY( \
+        __clang_minor__                                \
+    ) "." STRINGIFY(__clang_patchlevel__)
+#elif defined(__GNUC__)
+#define COMPILER_INFO                                                       \
+    "GCC " STRINGIFY(__GNUC__) "." STRINGIFY(__GNUC_MINOR__) "." STRINGIFY( \
+        __GNUC_PATCHLEVEL__                                                 \
+    )
+#elif defined(_MSC_VER)
+#define COMPILER_INFO "MSVC " STRINGIFY(_MSC_FULL_VER)
+#else
+#define COMPILER_INFO "Unknown compiler"
+#endif
+
+#pragma message(                                                     \
+    "konduit requires your compiler to support c23 #embed. "         \
+    "Your compiler is: " COMPILER_INFO ", which does not support it" \
+)
+
+#error see message above
+#endif
+
 // the #embeds are done in extern couse static embeds brick most C intelisense
 // providers
 
