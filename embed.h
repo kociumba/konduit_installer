@@ -28,7 +28,7 @@
     "Your compiler is: " COMPILER_INFO ", which does not support it" \
 )
 
-#error see message above
+#error your compiler is insufficient for konduit, see message above for more details (message only displayed if your compiler supports #pragma message)
 #endif
 
 // the #embeds are done in extern couse static embeds brick most C intelisense
