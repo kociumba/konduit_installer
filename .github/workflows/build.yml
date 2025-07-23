@@ -25,7 +25,7 @@ jobs:
                     wget https://apt.llvm.org/llvm.sh
                     chmod +x llvm.sh
                     sudo ./llvm.sh 19
-                    sudo apt install -y cmake ninja-build clang-19 libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+                    sudo apt install -y cmake ninja-build clang-19 clang-tools-19 libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
                     sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-19 100
                     sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-19 100
 
