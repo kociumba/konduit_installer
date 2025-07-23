@@ -69,6 +69,13 @@ jobs:
                 run: |
                     cmake --build build --config Release
 
+            -   name: Upload binary (Linux/macOS)
+                if: runner.os != 'Windows'
+                uses: actions/upload-artifact@v4
+                with:
+                    name: konduit_installer-${{ runner.os }}
+                    path: build/konduit_installer
+
             -   name: Configure (Windows with MinGW + Ninja)
                 if: runner.os == 'Windows'
                 shell: msys2 {0}
@@ -82,3 +89,10 @@ jobs:
                 shell: msys2 {0}
                 run: |
                     cmake --build build --config Release
+
+            -   name: Upload binary (Windows)
+                if: runner.os == 'Windows'
+                uses: actions/upload-artifact@v4
+                with:
+                    name: konduit_installer-{{ runner.os }}
+                    path: build/konduit_installer.exe
