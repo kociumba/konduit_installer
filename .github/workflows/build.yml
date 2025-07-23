@@ -21,13 +21,18 @@ jobs:
                 if: runner.os == 'Linux'
                 run: |
                     sudo apt update
-                    sudo apt install -y cmake ninja-build g++ libgl1-mesa-dev libx11-dev libxrandr-dev
+                    sudo apt install -y cmake ninja-build g++ libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev
 
             -   name: Set up dependencies (macOS)
                 if: runner.os == 'macOS'
                 run: |
                     brew install cmake ninja llvm
                     echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
+
+            -   name: Install macOS CommandLineTools
+                if: runner.os == 'macOS'
+                run: |
+                    sudo xcode-select --install || true
 
             -   name: Set up MSYS2 with MinGW and Ninja (Windows)
                 if: runner.os == 'Windows'
@@ -44,10 +49,12 @@ jobs:
                 if: runner.os != 'Windows'
                 run: |
                     if [ "${{ runner.os }}" = "macOS" ]; then
-                        export CC=/opt/homebrew/opt/llvm/bin/clang
-                        export CXX=/opt/homebrew/opt/llvm/bin/clang++
+                     export CC=/opt/homebrew/opt/llvm/bin/clang
+                     export CXX=/opt/homebrew/opt/llvm/bin/clang++
+                     cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+                    else
+                     cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
                     fi
-                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
             -   name: Build (Linux/macOS)
                 if: runner.os != 'Windows'
@@ -59,8 +66,8 @@ jobs:
                 shell: msys2 {0}
                 run: |
                     cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-            #                          -DCMAKE_C_COMPILER=mingw-w64-x86_64-gcc \
-            #                          -DCMAKE_CXX_COMPILER=mingw-w64-x86_64-g++
+            #                                              -DCMAKE_C_COMPILER=mingw-w64-x86_64-gcc \
+            #                                              -DCMAKE_CXX_COMPILER=mingw-w64-x86_64-g++
 
             -   name: Build (Windows with MinGW + Ninja)
                 if: runner.os == 'Windows'
