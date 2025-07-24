@@ -43,3 +43,5 @@
 # misc
 /temp
 /cmake-*
+embed.c
+embed.h
