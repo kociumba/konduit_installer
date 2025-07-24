@@ -41,6 +41,23 @@ void progress_bar(
     Vector2 size = {-1, 30}
 );
 
+enum CheckboxType {
+    SQUARE,
+    CIRCLE,
+};
+
+static std::map<CheckboxType, Clay_CornerRadius> checkbox_rounding_styles = {
+    {CheckboxType::SQUARE, {4, 4, 4, 4}},
+    {CheckboxType::CIRCLE, {15, 15, 15, 15}}
+};
+
 bool checkbox(std::string label, bool* toggle);
+
+struct RadioOption {
+    std::string label;
+    bool* toggle;
+};
+
+bool radio_selection(std::string label, std::vector<RadioOption> options);
 
 #endif  // KONDUIT_INSTALLER_COMPONENTS_HPP

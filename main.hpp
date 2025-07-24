@@ -8,6 +8,7 @@
 #include "clayman.hpp"
 #include "embed.h"
 #include "raylib.h"
+#include "rlgl.h"
 
 #define ce constexpr
 

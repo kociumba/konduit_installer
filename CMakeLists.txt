@@ -8,6 +8,7 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# resource embedding
 set(GENERATED_EMBED_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/embed.h")
 set(GENERATED_EMBED_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/embed.c")
 
@@ -58,10 +59,7 @@ set(CXX_SOURCES main.cpp
         components.cpp
         components.hpp
         utils.hpp
-        utils.cpp
-        #        win32_entry.cpp
-        #        entry.h
-)
+        utils.cpp)
 
 add_executable(konduit_installer ${C_SOURCES} ${CXX_SOURCES})
 add_dependencies(konduit_installer generate_embed)

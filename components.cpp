@@ -1,5 +1,7 @@
 #include "components.hpp"
 
+#include <utility>
+
 bool button(std::string text, Vector2 size) {
     std::string name = std::format("{}_button", text);
     clay.element(
@@ -369,7 +371,7 @@ void progress_bar(
     );
 }
 
-bool checkbox(std::string label, bool* toggle) {
+bool checkbox_internal(std::string label, bool* toggle, CheckboxType type) {
     auto name = std::format("{}_checkbox", label);
     auto clickable_name = std::format("{}_clickable", name);
 
@@ -396,7 +398,7 @@ bool checkbox(std::string label, bool* toggle) {
                         MAIN_DARK,
                         TEXT_DARK
                     ),
-                    .cornerRadius = {4, 4, 4, 4},
+                    .cornerRadius = checkbox_rounding_styles[type],
                     .border =
                         {.color = color_transition(
                              clickable_name,
@@ -436,7 +438,7 @@ bool checkbox(std::string label, bool* toggle) {
                                 TRANSPARENT,
                                 0.15
                             ),
-                            .cornerRadius = {6, 6, 6, 6},
+                            .cornerRadius = checkbox_rounding_styles[type],
                         },
                         [&] {}
                     );
@@ -460,9 +462,60 @@ bool checkbox(std::string label, bool* toggle) {
     return false;
 }
 
-// the idea for this is solid, but I would need to load fonts at higher weight
-// keeping it for later, maybe
-// to do this properly void text_outline(
+bool checkbox(std::string label, bool* toggle) {
+    return checkbox_internal(std::move(label), toggle, CheckboxType::SQUARE);
+}
+
+bool radio_selection(std::string label, std::vector<RadioOption> options) {
+    auto name = std::format("{}_radio", label);
+    bool change = false;
+
+    clay.element(
+        {
+            .id = clay.hashID(name),
+            .layout =
+                {
+                    .childGap = 8,
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                },
+        },
+        [&] {
+            clay.textElement(
+                label,
+                {
+                    .textColor = K_WHITE,
+                    .fontId = FONT_SIZE_18_ID,
+                    .fontSize = 18,
+                }
+            );
+            for (size_t i = 0; i < options.size(); ++i) {
+                if (checkbox_internal(
+                        options[i].label,
+                        options[i].toggle,
+                        CheckboxType::CIRCLE
+                    )) {
+                    change = true;
+                    if (*options[i].toggle) {
+                        for (size_t j = 0; j < options.size(); ++j) {
+                            if (j != i) {
+                                *options[j].toggle = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    );
+
+    if (change) {
+        change = false;
+        return true;
+    }
+    return false;
+}
+
+// the idea for this is solid, but I would need to load fonts at higher
+// weight keeping it for later, maybe to do this properly void text_outline(
 //     const std::string& text,
 //     const Clay_TextElementConfig textElementConfig) {
 //     auto base_id = clay.hashID(std::format("text_base_{}", text));

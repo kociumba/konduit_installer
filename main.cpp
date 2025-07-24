@@ -30,6 +30,9 @@ struct Install_data {
     }
     DirectoryValidationResult validation;
     bool test_toggle = false;
+
+    bool radio_test1 = false;
+    bool radio_test2 = false;
 } data;
 
 void drag() {
@@ -53,7 +56,7 @@ void drag() {
 }
 
 void input() {
-    if (IsKeyPressed(KEY_F1)) {
+    if (IsKeyPressed(KEY_F3)) {
         debug = !debug;
     }
     if (IsKeyPressed(KEY_F11)) {
@@ -62,14 +65,15 @@ void input() {
 }
 
 void debug_ui() {
-    auto debug_string = std::format("FPS {}", GetFPS());
+    auto debug_string =
+        std::format("FPS {} | GL version: {}", GetFPS(), rlGetVersion());
     clay.element(
         {
             .id = clay.hashID("debug_container"),
             .layout =
-                {.sizing = clay.fixedSize(
-                     MeasureText(debug_string.c_str(), 18) + 10, 35
-                 ),
+                {.sizing =
+                     {.width = {.type = CLAY__SIZING_TYPE_FIT},
+                      .height = {.size{.minMax = {.min = 35, .max = 35}}}},
                  .padding = clay.padAll(8),
                  .childGap = 16,
                  .layoutDirection = CLAY_LEFT_TO_RIGHT},
@@ -124,6 +128,11 @@ void installer_ui() {
                 [&] {
                     progress_bar(fmod(GetTime(), 2.0) / 2.0, "progress_test");
                     checkbox("toggle", &data.test_toggle);
+                    radio_selection(
+                        "one of these",
+                        {{"first", &data.radio_test1},
+                         {"second", &data.radio_test2}}
+                    );
                     clay.textElement(
                         std::format(
                             "Select directory: \"{}\"", data.install_path
