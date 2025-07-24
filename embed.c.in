@@ -1,0 +1,4 @@
+#include "embed.h"
+
+// clang-format off
+@EMBED_SOURCES@

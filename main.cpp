@@ -237,19 +237,19 @@ int main() {
     );
 
     fonts[0] = LoadFontFromMemory(
-        ".ttf", roboto_font, roboto_font_size, 24, nullptr, 400
+        ".ttf", roboto_regular_data, roboto_regular_size, 24, nullptr, 400
     );
     GenTextureMipmaps(&fonts[0].texture);
     SetTextureFilter(fonts[0].texture, TEXTURE_FILTER_TRILINEAR);
     fonts[1] = LoadFontFromMemory(
-        ".ttf", roboto_font, roboto_font_size, 18, nullptr, 400
+        ".ttf", roboto_regular_data, roboto_regular_size, 18, nullptr, 400
     );
     GenTextureMipmaps(&fonts[1].texture);
     SetTextureFilter(fonts[1].texture, TEXTURE_FILTER_TRILINEAR);
     fonts[2] = LoadFontFromMemory(
         ".ttf",
-        fa_icon_font,
-        fa_icon_font_size,
+        fa_regular_400_data,
+        fa_regular_400_size,
         24,
         (int*)(icon_codepoints.data()),
         icon_codepoints.size()

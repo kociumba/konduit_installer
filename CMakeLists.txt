@@ -8,6 +8,24 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(GENERATED_EMBED_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/embed.h")
+set(GENERATED_EMBED_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/embed.c")
+
+add_custom_command(
+        OUTPUT ${GENERATED_EMBED_HEADER} ${GENERATED_EMBED_SOURCE}
+        COMMAND ${CMAKE_COMMAND}
+        -D CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -D CMAKE_CURRENT_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/generate_embed_files.cmake
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/ ${CMAKE_CURRENT_SOURCE_DIR}/embed.h.in ${CMAKE_CURRENT_SOURCE_DIR}/embed.c.in
+        COMMENT "Generating embed.c and embed.h from assets..."
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_target(generate_embed
+        DEPENDS ${GENERATED_EMBED_HEADER} ${GENERATED_EMBED_SOURCE}
+)
+
 set(RAYLIB_VERSION 5.5)
 find_package(raylib ${RAYLIB_VERSION} QUIET)
 if (NOT raylib_FOUND)
@@ -32,8 +50,8 @@ set(C_SOURCES include/tinyfiledialogs/tinyfiledialogs.c
         include/raylib/rres_impl.c
         include/lz4/lz4.c
         include/raylib/rres-raylib_impl.c
-        embed.h
-        embed.c)
+        ${GENERATED_EMBED_SOURCE})
+
 set(CXX_SOURCES main.cpp
         main.hpp
         clayman.cpp
@@ -46,13 +64,14 @@ set(CXX_SOURCES main.cpp
 )
 
 add_executable(konduit_installer ${C_SOURCES} ${CXX_SOURCES})
+add_dependencies(konduit_installer generate_embed)
 
 set_source_files_properties(${C_SOURCES} WIN32 PROPERTIES LANGUAGE C)
 if (MSVC)
     set_source_files_properties(${C_SOURCES} PROPERTIES COMPILE_FLAGS "/TC")
 endif ()
 
-target_include_directories(konduit_installer PUBLIC include)
+target_include_directories(konduit_installer PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(konduit_installer PUBLIC raylib)
 
 if (WIN32)
