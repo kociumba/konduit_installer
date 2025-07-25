@@ -20,6 +20,8 @@ Vector2 panOffset = mousePosition;
 bool drag_window = false;
 bool should_close = false;
 bool debug = false;
+unsigned int window_flags = FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT |
+                            FLAG_WINDOW_TRANSPARENT | FLAG_VSYNC_HINT;
 
 struct Install_data {
     std::string input_buffer;
@@ -36,6 +38,7 @@ struct Install_data {
 } data;
 
 void drag() {
+#if defined(_WIN32)
     mousePosition = GetMousePosition();
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !drag_window) {
@@ -53,6 +56,7 @@ void drag() {
             drag_window = false;
         }
     }
+#endif
 }
 
 void input() {
@@ -237,12 +241,15 @@ int main() {
     g_clayManInstance =
         new ClayMan(windowSize.x, windowSize.y, Raylib_MeasureText, fonts);
 
+#ifdef _WIN32
+    window_flags = window_flags | FLAG_WINDOW_UNDECORATED;
+#endif
+
     Clay_Raylib_Initialize(
         clay.getWindowWidth(),
         clay.getWindowHeight(),
         "... installer",
-        FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT | FLAG_WINDOW_UNDECORATED |
-            FLAG_WINDOW_TRANSPARENT | FLAG_VSYNC_HINT
+        window_flags
     );
 
     fonts[0] = LoadFontFromMemory(
