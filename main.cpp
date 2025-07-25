@@ -11,8 +11,6 @@ ClayMan& getGlobalClayManInstance() {
 
 #define clay getGlobalClayManInstance()
 
-#define info(text) TraceLog(LOG_INFO, text)
-
 Vector2 mousePosition = {0, 0};
 Vector2 windowPosition = {0, 0};
 Vector2 windowSize = {600, 400};
@@ -35,6 +33,12 @@ struct Install_data {
 
     bool radio_test1 = false;
     bool radio_test2 = false;
+
+    std::string temp_path;
+
+    bool show_popup = false;
+
+    std::string popup_input_buffer;
 } data;
 
 void drag() {
@@ -201,7 +205,15 @@ void installer_ui() {
                         should_close = true;
                     }
                     if (button("Next")) {
+                        data.temp_path =
+                            write_to_temp_file(test_data, test_size);
+                        info(data.temp_path.c_str());
+                        load_resource(data.temp_path);
+                        data.show_popup = true;
                     }
+                    popup("detination selection", &data.show_popup, [&] {
+                        text_input("dummy input", &data.popup_input_buffer);
+                    });
                 }
             );
         }
@@ -315,6 +327,7 @@ int main() {
         EndDrawing();
     }
 
+    remove_temp_file(data.temp_path);
     delete g_clayManInstance;
     for (const auto& font : fonts) {
         UnloadFont(font);

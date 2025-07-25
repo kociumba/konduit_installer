@@ -60,4 +60,6 @@ struct RadioOption {
 
 bool radio_selection(std::string label, std::vector<RadioOption> options);
 
+bool popup(std::string id, bool* open, std::function<void()> content);
+
 #endif  // KONDUIT_INSTALLER_COMPONENTS_HPP

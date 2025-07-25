@@ -516,6 +516,51 @@ bool radio_selection(std::string label, std::vector<RadioOption> options) {
     return false;
 }
 
+bool popup(std::string id, bool* open, std::function<void()> content) {
+    auto name = std::format("{}_popup", id);
+    bool closed = false;
+
+    if (*open) {
+        clay.element(
+            {.id = clay.hashID(name),
+             .layout =
+                 {
+                     .sizing =
+                         clay.fixedSize(GetScreenWidth(), GetScreenWidth()),
+                     .childAlignment =
+                         {.x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER},
+                 },
+             .backgroundColor = OVERLAY_COLOR,
+             .cornerRadius = {10, 10, 10, 10},
+             .floating = {.attachTo = CLAY_ATTACH_TO_ROOT}},
+            [&] {
+                clay.element(
+                    {.id = clay.hashID(name + "_close_button_container"),
+                     .floating =
+                         {
+                             .offset =
+                                 {.x =
+                                      static_cast<float>(GetScreenWidth() - 90),
+                                  .y = 10},
+                             .attachTo = CLAY_ATTACH_TO_ROOT,
+                         }},
+                    [&] {
+                        if (button("Close")) {
+                            closed = true;
+                            *open = false;
+                        }
+                    }
+                );
+                content();
+            }
+        );
+    }
+
+    if (closed)
+        return true;
+    return false;
+}
+
 // the idea for this is solid, but I would need to load fonts at higher
 // weight keeping it for later, maybe to do this properly void text_outline(
 //     const std::string& text,

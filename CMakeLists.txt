@@ -59,7 +59,9 @@ set(CXX_SOURCES main.cpp
         components.cpp
         components.hpp
         utils.hpp
-        utils.cpp)
+        utils.cpp
+        installation/encoding_handling.cpp
+        installation/encoding_handling.hpp)
 
 add_executable(konduit_installer ${C_SOURCES} ${CXX_SOURCES})
 add_dependencies(konduit_installer generate_embed)

@@ -7,8 +7,12 @@
 #include <format>
 #include "clayman.hpp"
 #include "embed.h"
+#include "installation/encoding_handling.hpp"
 #include "raylib.h"
 #include "rlgl.h"
+
+#define info(text) TraceLog(LOG_INFO, text)
+#define error(text) TraceLog(LOG_ERROR, text)
 
 #define ce constexpr
 
@@ -34,6 +38,7 @@ ce Clay_Color TEXT_GRAY = {160, 160, 160, 200};
 ce Clay_Color BORDER_GRAY = {80, 80, 80, 255};
 ce Clay_Color BORDER_LIGHT = {100, 100, 100, 255};
 ce Clay_Color SECONDARY_BG = {40, 40, 40, 230};
+ce Clay_Color OVERLAY_COLOR = {0, 0, 0, 200};
 
 ce int FONT_SIZE_24_ID = 0;
 ce int FONT_SIZE_18_ID = 1;
