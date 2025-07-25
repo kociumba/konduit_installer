@@ -1,5 +1,7 @@
 #include "utils.hpp"
 
+#include <utility>
+
 Clay_Sizing center_percent() {
     return Clay_Sizing{
         .width = {.size = {.percent = 0.5}, .type = CLAY__SIZING_TYPE_PERCENT},
@@ -160,7 +162,8 @@ Clay_Color color_transition(
     bool condition,
     const Clay_Color& trueColor,
     const Clay_Color& falseColor,
-    float duration
+    float duration,
+    EasingFunction easingFunc
 ) {
     auto& states = get_color_states();
 
@@ -175,6 +178,7 @@ Clay_Color color_transition(
     auto& state = it->second;
     state.trueColor = trueColor;
     state.falseColor = falseColor;
+    state.easingFunc = std::move(easingFunc);
     Clay_Color newTarget = condition ? trueColor : falseColor;
 
     if (newTarget.r != state.targetColor.r ||
@@ -196,10 +200,13 @@ Clay_Color color_transition(
             state.isTransitioning = false;
             state.currentColor = state.targetColor;
         } else {
+            float easedProgress =
+                state.easingFunc(state.progress, 0.0f, 1.0f, 1.0f);
+
             Color raylibSource = to_raylib_color(state.sourceColor);
             Color raylibTarget = to_raylib_color(state.targetColor);
             Color raylibResult =
-                ColorLerp(raylibSource, raylibTarget, state.progress);
+                ColorLerp(raylibSource, raylibTarget, easedProgress);
             state.currentColor = {
                 static_cast<float>(raylibResult.r),
                 static_cast<float>(raylibResult.g),
@@ -216,7 +223,8 @@ Clay_Color color_transition(
     const std::string& id,
     const std::vector<ColorCondition>& conditions,
     const Clay_Color& defaultColor,
-    float duration
+    float duration,
+    EasingFunction easingFunc
 ) {
     auto& states = get_color_states();
 
@@ -231,6 +239,7 @@ Clay_Color color_transition(
     auto& state = it->second;
     state.conditions = conditions;
     state.defaultColor = defaultColor;
+    state.easingFunc = std::move(easingFunc);
 
     Clay_Color newTarget = defaultColor;
     for (const auto& cond : conditions) {
@@ -257,10 +266,13 @@ Clay_Color color_transition(
             state.isTransitioning = false;
             state.currentColor = state.targetColor;
         } else {
+            float easedProgress =
+                state.easingFunc(state.progress, 0.0f, 1.0f, 1.0f);
+
             Color raylibSource = to_raylib_color(state.sourceColor);
             Color raylibTarget = to_raylib_color(state.targetColor);
             Color raylibResult =
-                ColorLerp(raylibSource, raylibTarget, state.progress);
+                ColorLerp(raylibSource, raylibTarget, easedProgress);
             state.currentColor = {
                 static_cast<float>(raylibResult.r),
                 static_cast<float>(raylibResult.g),
@@ -307,7 +319,8 @@ float float_transition(
     bool condition,
     float trueVal,
     float falseVal,
-    float duration
+    float duration,
+    EasingFunction easingFunc
 ) {
     auto& states = get_value_states();
     auto it = states.find(id);
@@ -322,6 +335,7 @@ float float_transition(
     auto& state = it->second;
     state.trueFloat = trueVal;
     state.falseFloat = falseVal;
+    state.easingFunc = std::move(easingFunc);
 
     float newTarget = condition ? trueVal : falseVal;
 
@@ -340,8 +354,12 @@ float float_transition(
             state.isTransitioning = false;
             state.currentFloat = state.targetFloat;
         } else {
-            state.currentFloat = lerp_float(
-                state.sourceFloat, state.targetFloat, state.progress
+            float changeAmount = state.targetFloat - state.sourceFloat;
+            state.currentFloat = state.easingFunc(
+                state.progress * state.duration,
+                state.sourceFloat,
+                changeAmount,
+                state.duration
             );
         }
     }
@@ -354,7 +372,8 @@ int int_transition(
     bool condition,
     int trueVal,
     int falseVal,
-    float duration
+    float duration,
+    EasingFunction easingFunc
 ) {
     auto& states = get_value_states();
     auto it = states.find(id);
@@ -369,6 +388,7 @@ int int_transition(
     auto& state = it->second;
     state.trueInt = trueVal;
     state.falseInt = falseVal;
+    state.easingFunc = std::move(easingFunc);
 
     int newTarget = condition ? trueVal : falseVal;
 
@@ -387,8 +407,15 @@ int int_transition(
             state.isTransitioning = false;
             state.currentInt = state.targetInt;
         } else {
-            state.currentInt =
-                lerp_int(state.sourceInt, state.targetInt, state.progress);
+            auto changeAmount =
+                static_cast<float>(state.targetInt - state.sourceInt);
+            float easedValue = state.easingFunc(
+                state.progress * state.duration,
+                static_cast<float>(state.sourceInt),
+                changeAmount,
+                state.duration
+            );
+            state.currentInt = lround(easedValue);
         }
     }
 
@@ -399,7 +426,8 @@ float float_transition(
     const std::string& id,
     const std::vector<FloatCondition>& conditions,
     float defaultVal,
-    float duration
+    float duration,
+    EasingFunction easingFunc
 ) {
     auto& states = get_value_states();
     auto it = states.find(id);
@@ -414,6 +442,7 @@ float float_transition(
     auto& state = it->second;
     state.floatConditions = conditions;
     state.defaultFloat = defaultVal;
+    state.easingFunc = std::move(easingFunc);
 
     float newTarget = defaultVal;
     for (const auto& cond : conditions) {
@@ -437,8 +466,12 @@ float float_transition(
             state.isTransitioning = false;
             state.currentFloat = state.targetFloat;
         } else {
-            state.currentFloat = lerp_float(
-                state.sourceFloat, state.targetFloat, state.progress
+            float changeAmount = state.targetFloat - state.sourceFloat;
+            state.currentFloat = state.easingFunc(
+                state.progress * state.duration,
+                state.sourceFloat,
+                changeAmount,
+                state.duration
             );
         }
     }
@@ -450,7 +483,8 @@ int int_transition(
     const std::string& id,
     const std::vector<IntCondition>& conditions,
     int defaultVal,
-    float duration
+    float duration,
+    EasingFunction easingFunc
 ) {
     auto& states = get_value_states();
     auto it = states.find(id);
@@ -465,6 +499,7 @@ int int_transition(
     auto& state = it->second;
     state.intConditions = conditions;
     state.defaultInt = defaultVal;
+    state.easingFunc = easingFunc;
 
     int newTarget = defaultVal;
     for (const auto& cond : conditions) {
@@ -488,8 +523,15 @@ int int_transition(
             state.isTransitioning = false;
             state.currentInt = state.targetInt;
         } else {
-            state.currentInt =
-                lerp_int(state.sourceInt, state.targetInt, state.progress);
+            float changeAmount =
+                static_cast<float>(state.targetInt - state.sourceInt);
+            float easedValue = state.easingFunc(
+                state.progress * state.duration,
+                static_cast<float>(state.sourceInt),
+                changeAmount,
+                state.duration
+            );
+            state.currentInt = lround(easedValue);
         }
     }
 

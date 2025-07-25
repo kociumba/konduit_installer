@@ -421,14 +421,16 @@ bool checkbox_internal(std::string label, bool* toggle, CheckboxType type) {
                                          *toggle,
                                          20,
                                          1,
-                                         0.1
+                                         0.1,
+                                         EaseBounceInOut
                                      ),
                                      int_transition(
                                          clickable_name + "_clicked" + "_h",
                                          *toggle,
                                          20,
                                          1,
-                                         0.1
+                                         0.1,
+                                         EaseBounceInOut
                                      )
                                  )},
                             .backgroundColor = color_transition(

@@ -5,11 +5,13 @@
 #include <functional>
 #include <iostream>
 // #include <mutex>
+#include <raylib/reasings.h>
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 #include "main.hpp"
 
@@ -65,6 +67,8 @@ static inline Color to_raylib_color(const Clay_Color& clayColor) {
     };
 }
 
+using EasingFunction = std::function<float(float, float, float, float)>;
+
 enum class TransitionType { BINARY, MULTI };
 
 struct ColorCondition {
@@ -88,9 +92,12 @@ struct ColorTransitionState {
     std::vector<ColorCondition> conditions;
     Clay_Color defaultColor;
 
+    EasingFunction easingFunc = EaseLinearNone;
+
     explicit ColorTransitionState(
         float dur,
-        TransitionType t = TransitionType::BINARY
+        TransitionType t = TransitionType::BINARY,
+        EasingFunction easing = EaseLinearNone
     )
         : type(t),
           duration(dur),
@@ -99,7 +106,8 @@ struct ColorTransitionState {
           currentColor({0.0f, 0.0f, 0.0f, 255.0f}),
           sourceColor({0.0f, 0.0f, 0.0f, 255.0f}),
           targetColor({0.0f, 0.0f, 0.0f, 255.0f}),
-          lastCondition(false) {}
+          lastCondition(false),
+          easingFunc(std::move(easing)) {}
 };
 
 static std::unordered_map<std::string, ColorTransitionState>&
@@ -110,14 +118,16 @@ Clay_Color color_transition(
     bool condition,
     const Clay_Color& trueColor,
     const Clay_Color& falseColor,
-    float duration = 0.15f
+    float duration = 0.15f,
+    EasingFunction easingFunc = EaseLinearNone
 );
 
 Clay_Color color_transition(
     const std::string& id,
     const std::vector<ColorCondition>& conditions,
     const Clay_Color& defaultColor,
-    float duration = 0.15f
+    float duration = 0.15f,
+    EasingFunction easingFunc = EaseLinearNone
 );
 
 void reset_color_transition(const std::string& id);
@@ -166,12 +176,19 @@ struct ValueTransitionState {
     std::vector<IntCondition> intConditions;
     int defaultInt;
 
-    explicit ValueTransitionState(float dur, TransitionType t)
+    EasingFunction easingFunc = EaseLinearNone;
+
+    explicit ValueTransitionState(
+        float dur,
+        TransitionType t,
+        EasingFunction easing = EaseLinearNone
+    )
         : type(t),
           duration(dur),
           progress(0.0f),
           isTransitioning(false),
-          lastCondition(false) {}
+          lastCondition(false),
+          easingFunc(std::move(easing)) {}
 };
 
 static std::unordered_map<std::string, ValueTransitionState>&
@@ -186,7 +203,8 @@ float float_transition(
     bool condition,
     float trueVal,
     float falseVal,
-    float duration = 0.15f
+    float duration = 0.15f,
+    EasingFunction easingFunc = EaseLinearNone
 );
 
 int int_transition(
@@ -194,21 +212,24 @@ int int_transition(
     bool condition,
     int trueVal,
     int falseVal,
-    float duration = 0.15f
+    float duration = 0.15f,
+    EasingFunction easingFunc = EaseLinearNone
 );
 
 float float_transition(
     const std::string& id,
     const std::vector<FloatCondition>& conditions,
     float defaultVal,
-    float duration = 0.15f
+    float duration = 0.15f,
+    EasingFunction easingFunc = EaseLinearNone
 );
 
 int int_transition(
     const std::string& id,
     const std::vector<IntCondition>& conditions,
     int defaultVal,
-    float duration = 0.15f
+    float duration = 0.15f,
+    EasingFunction easingFunc = EaseLinearNone
 );
 
 uint32_t codepoint(const char* str);
