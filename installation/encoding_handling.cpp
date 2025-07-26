@@ -45,7 +45,7 @@ optional<LoadedData> load_resource(const std::string& path) {
                     r = UnpackResourceChunk(&chunk);
                     if (r == 0) {
                         unsigned int dataSize = 0;
-                        res.data.back() =
+                        res.data[res.dir.entries[j].fileName] =
                             LoadDataFromResource(chunk, &dataSize);
                     }
                     rresUnloadResourceChunk(chunk);
@@ -73,12 +73,30 @@ std::string write_to_temp_file(const unsigned char* data, size_t data_size) {
     out.write(reinterpret_cast<const char*>(data), data_size);
     out.close();
 
+    temp_files.push_back(temp_path.string());
+
     return temp_path.string();
 }
 
-bool remove_temp_file(std::string path) {
+bool remove_temp_file(const std::string& path) {
     if (path.empty())
         return true;
     std::error_code ec;
     return std::filesystem::remove(path, ec);
+}
+
+bool remove_all_temp_files() {
+    int errors = 0;
+    for (const auto& file : temp_files) {
+        if (!remove_temp_file(file)) {
+            errors++;
+            error(std::format("error removing: {}", file).c_str());
+        }
+        info(std::format("{} removed correctly", file).c_str());
+    }
+    if (errors > 0) {
+        return false;
+    }
+
+    return true;
 }

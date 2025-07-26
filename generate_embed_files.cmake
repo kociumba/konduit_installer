@@ -9,7 +9,7 @@ file(GLOB_RECURSE ASSET_FILES "${ASSETS_DIR}/*")
 set(EMBED_HEADERS "")
 set(EMBED_SOURCES "")
 
-set(BUNDLE_FILE "temp/test.rres" CACHE FILEPATH "Bundle path")
+set(BUNDLE_FILE "test_assets/test.rres" CACHE FILEPATH "Bundle path")
 
 function(embed_file FILE_PATH)
     get_filename_component(NAME_WE "${FILE_PATH}" NAME_WE)
@@ -33,7 +33,7 @@ foreach (ASSET_FILE ${ASSET_FILES})
 endforeach ()
 
 if (BUNDLE_FILE AND EXISTS "${BUNDLE_FILE}" AND NOT IS_DIRECTORY "${BUNDLE_FILE}")
-    message(STATUS "Embedding extra file: ${BUNDLE_FILE}")
+    message(STATUS "Embedding bundle file: ${BUNDLE_FILE}")
     embed_file("${BUNDLE_FILE}")
 endif ()
 

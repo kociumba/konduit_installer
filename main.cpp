@@ -208,10 +208,10 @@ void installer_ui() {
                         data.temp_path =
                             write_to_temp_file(test_data, test_size);
                         info(data.temp_path.c_str());
-                        load_resource(data.temp_path);
+                        auto t = load_resource(data.temp_path);
                         data.show_popup = true;
                     }
-                    popup("detination selection", &data.show_popup, [&] {
+                    popup("destination selection", &data.show_popup, [&] {
                         text_input("dummy input", &data.popup_input_buffer);
                     });
                 }
@@ -327,7 +327,7 @@ int main() {
         EndDrawing();
     }
 
-    remove_temp_file(data.temp_path);
+    remove_all_temp_files();
     delete g_clayManInstance;
     for (const auto& font : fonts) {
         UnloadFont(font);

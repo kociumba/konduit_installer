@@ -526,7 +526,7 @@ bool popup(std::string id, bool* open, std::function<void()> content) {
              .layout =
                  {
                      .sizing =
-                         clay.fixedSize(GetScreenWidth(), GetScreenWidth()),
+                         clay.fixedSize(GetScreenWidth(), GetScreenHeight()),
                      .childAlignment =
                          {.x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER},
                  },
