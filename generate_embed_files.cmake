@@ -9,7 +9,7 @@ file(GLOB_RECURSE ASSET_FILES "${ASSETS_DIR}/*")
 set(EMBED_HEADERS "")
 set(EMBED_SOURCES "")
 
-set(BUNDLE_FILE "test_assets/test.rres" CACHE FILEPATH "Bundle path")
+set(BUNDLE_FILE "test_assets/konduit_installer-main.tar.gz" CACHE FILEPATH "Bundle path")
 
 function(embed_file FILE_PATH)
     get_filename_component(NAME_WE "${FILE_PATH}" NAME_WE)

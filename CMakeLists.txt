@@ -46,6 +46,8 @@ if (NOT raylib_FOUND)
     endif ()
 endif ()
 
+find_package(LibArchive REQUIRED)
+
 set(C_SOURCES include/tinyfiledialogs/tinyfiledialogs.c
         include/raylib/clay_renderer_raylib.c
         include/raylib/rres_impl.c
@@ -56,8 +58,8 @@ set(C_SOURCES include/tinyfiledialogs/tinyfiledialogs.c
 set(CXX_SOURCES main.cpp
         main.hpp
         clayman.cpp
-        components.cpp
-        components.hpp
+        ui/components.cpp
+        ui/components.hpp
         utils.hpp
         utils.cpp
         installation/encoding_handling.cpp
@@ -72,7 +74,7 @@ if (MSVC)
 endif ()
 
 target_include_directories(konduit_installer PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(konduit_installer PUBLIC raylib)
+target_link_libraries(konduit_installer PUBLIC raylib LibArchive::LibArchive)
 
 if (WIN32)
     target_link_libraries(konduit_installer PRIVATE Comdlg32.lib Ole32.lib user32.lib gdi32.lib)

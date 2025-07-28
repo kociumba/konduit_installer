@@ -1,6 +1,6 @@
 #include "main.hpp"
-#include "components.hpp"
 #include "include/raylib/clay_renderer_raylib.h"
+#include "ui/components.hpp"
 
 ClayMan* g_clayManInstance = nullptr;
 
@@ -205,10 +205,10 @@ void installer_ui() {
                         should_close = true;
                     }
                     if (button("Next")) {
-                        data.temp_path =
-                            write_to_temp_file(test_data, test_size);
-                        info(data.temp_path.c_str());
-                        auto t = load_resource(data.temp_path);
+                        auto t = encoding::load_resource_from_memory(
+                            konduit_installer_main_data,
+                            konduit_installer_main_size
+                        );
                         data.show_popup = true;
                     }
                     popup("destination selection", &data.show_popup, [&] {
@@ -327,7 +327,7 @@ int main() {
         EndDrawing();
     }
 
-    remove_all_temp_files();
+    encoding::remove_all_temp_files();
     delete g_clayManInstance;
     for (const auto& font : fonts) {
         UnloadFont(font);
