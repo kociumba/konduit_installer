@@ -53,12 +53,11 @@ jobs:
 
             -   name: Set up vcpkg (Windows)
                 if: runner.os == 'Windows'
+                shell: msys2 {0}
                 run: |
-                    git clone https://github.com/microsoft/vcpkg.git
-                    cd vcpkg
-                    ./bootstrap-vcpkg.bat
-                    ./vcpkg install libarchive
-                shell: cmd
+                    git clone https://github.com/microsoft/vcpkg.git /mingw64/vcpkg
+                    /mingw64/vcpkg/bootstrap-vcpkg.sh
+                    /mingw64/vcpkg/vcpkg install libarchive
 
             -   name: Configure (Linux/macOS)
                 if: runner.os != 'Windows'
@@ -66,6 +65,7 @@ jobs:
                     if [ "${{ runner.os }}" = "macOS" ]; then
                         export CC=/opt/homebrew/opt/llvm/bin/clang
                         export CXX=/opt/homebrew/opt/llvm/bin/clang++
+                        export CMAKE_PREFIX_PATH=/opt/homebrew/opt/libarchive
                         cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
                     else
                         export CC=clang-19
@@ -89,6 +89,7 @@ jobs:
                 if: runner.os == 'Windows'
                 shell: msys2 {0}
                 run: |
+                    export VCPKG_ROOT=/mingw64/vcpkg
                     cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake
 
             -   name: Build (Windows with MinGW + Ninja)
