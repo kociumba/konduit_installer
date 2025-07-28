@@ -21,7 +21,7 @@ jobs:
                 if: runner.os == 'Linux'
                 run: |
                     sudo apt update
-                    sudo apt install -y wget software-properties-common
+                    sudo apt install -y wget software-properties-common libarchive-dev
                     wget https://apt.llvm.org/llvm.sh
                     chmod +x llvm.sh
                     sudo ./llvm.sh 19
@@ -32,7 +32,7 @@ jobs:
             -   name: Set up dependencies (macOS)
                 if: runner.os == 'macOS'
                 run: |
-                    brew install cmake ninja llvm
+                    brew install cmake ninja llvm libarchive
                     echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
             -   name: Install macOS CommandLineTools
@@ -50,6 +50,15 @@ jobs:
                         mingw-w64-x86_64-toolchain
                         mingw-w64-x86_64-cmake
                         mingw-w64-x86_64-ninja
+
+            -   name: Set up vcpkg (Windows)
+                if: runner.os == 'Windows'
+                run: |
+                    git clone https://github.com/microsoft/vcpkg.git
+                    cd vcpkg
+                    ./bootstrap-vcpkg.bat
+                    ./vcpkg install libarchive
+                shell: cmd
 
             -   name: Configure (Linux/macOS)
                 if: runner.os != 'Windows'
@@ -80,9 +89,7 @@ jobs:
                 if: runner.os == 'Windows'
                 shell: msys2 {0}
                 run: |
-                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-            #                                              -DCMAKE_C_COMPILER=mingw-w64-x86_64-gcc \
-            #                                              -DCMAKE_CXX_COMPILER=mingw-w64-x86_64-g++
+                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake
 
             -   name: Build (Windows with MinGW + Ninja)
                 if: runner.os == 'Windows'
