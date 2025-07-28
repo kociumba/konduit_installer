@@ -50,15 +50,7 @@ jobs:
                         mingw-w64-x86_64-toolchain
                         mingw-w64-x86_64-cmake
                         mingw-w64-x86_64-ninja
-                        mingw-w64-x86_64-git
-
-            -   name: Set up vcpkg (Windows)
-                if: runner.os == 'Windows'
-                shell: msys2 {0}
-                run: |
-                    git clone https://github.com/microsoft/vcpkg.git /mingw64/vcpkg
-                    /mingw64/vcpkg/bootstrap-vcpkg.sh
-                    /mingw64/vcpkg/vcpkg install libarchive
+                        mingw-w64-x86_64-libarchive
 
             -   name: Configure (Linux/macOS)
                 if: runner.os != 'Windows'
@@ -90,8 +82,7 @@ jobs:
                 if: runner.os == 'Windows'
                 shell: msys2 {0}
                 run: |
-                    export VCPKG_ROOT=/mingw64/vcpkg
-                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake
+                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
             -   name: Build (Windows with MinGW + Ninja)
                 if: runner.os == 'Windows'
