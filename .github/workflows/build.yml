@@ -98,7 +98,7 @@ jobs:
                 shell: msys2 {0}
                 run: |
                     export VCPKG_ROOT=/mingw64/vcpkg
-                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/mingw64/vcpkg/scripts/buildsystems/vcpkg.cmake
+                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/mingw64/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-mingw-static
 
             -   name: Build (Windows with MinGW + Ninja)
                 if: runner.os == 'Windows'
