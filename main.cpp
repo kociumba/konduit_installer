@@ -206,8 +206,7 @@ void installer_ui() {
                     }
                     if (button("Next")) {
                         auto t = encoding::load_resource_from_memory(
-                            konduit_installer_main_data,
-                            konduit_installer_main_size
+                            roboto_data, roboto_size
                         );
                         data.show_popup = true;
                     }

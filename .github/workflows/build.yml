@@ -28,7 +28,7 @@ jobs:
                 if: runner.os == 'Linux'
                 run: |
                     sudo apt update
-                    sudo apt install -y wget software-properties-common libarchive-dev
+                    sudo apt install -y wget software-properties-common
                     wget https://apt.llvm.org/llvm.sh
                     chmod +x llvm.sh
                     sudo ./llvm.sh 19
@@ -39,7 +39,7 @@ jobs:
             -   name: Set up dependencies (macOS)
                 if: runner.os == 'macOS'
                 run: |
-                    brew install cmake ninja llvm libarchive
+                    brew install cmake ninja llvm
                     echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
             -   name: Install macOS CommandLineTools
@@ -57,15 +57,6 @@ jobs:
                         mingw-w64-x86_64-toolchain
                         mingw-w64-x86_64-cmake
                         mingw-w64-x86_64-ninja
-                        git
-
-            -   name: Set up vcpkg (Windows)
-                if: runner.os == 'Windows'
-                shell: msys2 {0}
-                run: |
-                    git clone https://github.com/microsoft/vcpkg.git /mingw64/vcpkg
-                    /mingw64/vcpkg/bootstrap-vcpkg.sh
-                    /mingw64/vcpkg/vcpkg install libarchive:x64-mingw-static
 
             -   name: Configure (Linux/macOS)
                 if: runner.os != 'Windows'
@@ -73,7 +64,6 @@ jobs:
                     if [ "${{ runner.os }}" = "macOS" ]; then
                         export CC=/opt/homebrew/opt/llvm/bin/clang
                         export CXX=/opt/homebrew/opt/llvm/bin/clang++
-                        export CMAKE_PREFIX_PATH=/opt/homebrew/opt/libarchive
                         cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
                     else
                         export CC=clang-19
@@ -98,7 +88,7 @@ jobs:
                 shell: msys2 {0}
                 run: |
                     export VCPKG_ROOT=/mingw64/vcpkg
-                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/mingw64/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-mingw-static
+                    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
             -   name: Build (Windows with MinGW + Ninja)
                 if: runner.os == 'Windows'

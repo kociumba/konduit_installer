@@ -14,30 +14,28 @@
 
 namespace encoding {
 
-#include <archive.h>
-#include <archive_entry.h>
-// prevent windows.h from conflicting with raylib
-#undef TRANSPARENT
-#undef ERROR
+#include <miniz.h>
 
 using std::nullopt;
 using std::optional;
 
 struct ArchiveEntry {
     std::string path;
-    int64_t size;
+    uint64_t size;
+    uint64_t uncompressed_size;
+    uint32_t file_index;
 
-    std::vector<uint8_t> extract_data(struct archive* a) const {
-        if (size <= 0)
+    std::vector<uint8_t> extract_data(mz_zip_archive* zip) const {
+        if (uncompressed_size == 0)
             return {};
 
-        std::vector<uint8_t> data(size);
-        ssize_t read = archive_read_data(a, data.data(), size);
+        std::vector<uint8_t> data(uncompressed_size);
 
-        if (read < 0)
+        if (!mz_zip_reader_extract_to_mem(
+                zip, file_index, data.data(), uncompressed_size, 0
+            )) {
             return {};
-        if (read != size)
-            data.resize(read);
+        }
 
         return data;
     }
@@ -46,16 +44,20 @@ struct ArchiveEntry {
 // prototype for streaming interface for the archives
 class ArchiveIterator {
    private:
-    struct archive* archive_;
-    struct archive_entry* current_entry_;
+    mz_zip_archive zip_;
+    uint32_t current_index_;
+    uint32_t total_files_;
     bool valid_;
 
     void advance_to_next_file() {
-        while (archive_read_next_header(archive_, &current_entry_) ==
-               ARCHIVE_OK) {
-            if (archive_entry_filetype(current_entry_) == AE_IFREG) {
-                return;
+        while (current_index_ < total_files_) {
+            mz_zip_archive_file_stat file_stat;
+            if (mz_zip_reader_file_stat(&zip_, current_index_, &file_stat)) {
+                if (!mz_zip_reader_is_file_a_directory(&zip_, current_index_)) {
+                    return;
+                }
             }
+            current_index_++;
         }
         valid_ = false;
     }
@@ -63,51 +65,58 @@ class ArchiveIterator {
    public:
     static optional<ArchiveIterator>
     from_memory(const unsigned char* buffer, size_t size) {
-        struct archive* a = archive_read_new();
-        if (!a)
-            return nullopt;
+        ArchiveIterator iter;
 
-        archive_read_support_filter_all(a);
-        archive_read_support_format_tar(a);
+        memset(&iter.zip_, 0, sizeof(iter.zip_));
 
-        if (archive_read_open_memory(a, buffer, size) != ARCHIVE_OK) {
-            archive_read_free(a);
+        // Use the buffer directly - no need to copy since caller manages
+        // lifetime
+        if (!mz_zip_reader_init_mem(&iter.zip_, buffer, size, 0)) {
             return nullopt;
         }
 
-        ArchiveIterator iter(a);
+        iter.total_files_ = mz_zip_reader_get_num_files(&iter.zip_);
+        iter.current_index_ = 0;
+        iter.valid_ = iter.total_files_ > 0;
+
+        if (iter.valid_) {
+            iter.advance_to_next_file();
+        }
+
         return iter.valid_ ? optional<ArchiveIterator>{std::move(iter)}
                            : nullopt;
     }
 
     static optional<ArchiveIterator> from_file(const std::string& path) {
-        struct archive* a = archive_read_new();
-        if (!a)
-            return nullopt;
+        ArchiveIterator iter;
 
-        archive_read_support_filter_all(a);
-        archive_read_support_format_tar(a);
+        memset(&iter.zip_, 0, sizeof(iter.zip_));
 
-        if (archive_read_open_filename(a, path.c_str(), 10240) != ARCHIVE_OK) {
-            archive_read_free(a);
+        if (!mz_zip_reader_init_file(&iter.zip_, path.c_str(), 0)) {
             return nullopt;
         }
 
-        ArchiveIterator iter(a);
+        iter.total_files_ = mz_zip_reader_get_num_files(&iter.zip_);
+        iter.current_index_ = 0;
+        iter.valid_ = iter.total_files_ > 0;
+
+        if (iter.valid_) {
+            iter.advance_to_next_file();
+        }
+
         return iter.valid_ ? optional<ArchiveIterator>{std::move(iter)}
                            : nullopt;
     }
 
    private:
-    explicit ArchiveIterator(struct archive* a)
-        : archive_(a), current_entry_(nullptr), valid_(true) {
-        advance_to_next_file();
+    ArchiveIterator() : current_index_(0), total_files_(0), valid_(false) {
+        memset(&zip_, 0, sizeof(zip_));
     }
 
    public:
     ~ArchiveIterator() {
-        if (archive_) {
-            archive_read_free(archive_);
+        if (zip_.m_pState) {
+            mz_zip_reader_end(&zip_);
         }
     }
 
@@ -115,50 +124,61 @@ class ArchiveIterator {
     ArchiveIterator& operator=(const ArchiveIterator&) = delete;
 
     ArchiveIterator(ArchiveIterator&& other) noexcept
-        : archive_(other.archive_),
-          current_entry_(other.current_entry_),
+        : zip_(other.zip_),
+          current_index_(other.current_index_),
+          total_files_(other.total_files_),
           valid_(other.valid_) {
-        other.archive_ = nullptr;
+        other.zip_.m_pState = nullptr;
         other.valid_ = false;
     }
 
     ArchiveIterator& operator=(ArchiveIterator&& other) noexcept {
         if (this != &other) {
-            if (archive_)
-                archive_read_free(archive_);
-            archive_ = other.archive_;
-            current_entry_ = other.current_entry_;
+            if (zip_.m_pState) {
+                mz_zip_reader_end(&zip_);
+            }
+            zip_ = other.zip_;
+            current_index_ = other.current_index_;
+            total_files_ = other.total_files_;
             valid_ = other.valid_;
-            other.archive_ = nullptr;
+            other.zip_.m_pState = nullptr;
             other.valid_ = false;
         }
         return *this;
     }
-
     [[nodiscard]] bool has_next() const { return valid_; }
 
     [[nodiscard]] ArchiveEntry current() const {
         if (!valid_)
-            return {"", 0};
+            return {"", 0, 0, 0};
 
-        const char* path = archive_entry_pathname(current_entry_);
-        int64_t size = archive_entry_size(current_entry_);
+        mz_zip_archive_file_stat file_stat;
+        if (!mz_zip_reader_file_stat(
+                const_cast<mz_zip_archive*>(&zip_), current_index_, &file_stat
+            )) {
+            return {"", 0, 0, 0};
+        }
 
-        return {path ? path : "", size};
+        return {
+            file_stat.m_filename,
+            file_stat.m_comp_size,
+            file_stat.m_uncomp_size,
+            current_index_
+        };
     }
 
     void next() {
         if (!valid_)
             return;
 
-        archive_read_data_skip(archive_);
+        current_index_++;
         advance_to_next_file();
     }
 
     std::vector<uint8_t> extract_current() {
         if (!valid_)
             return {};
-        return current().extract_data(archive_);
+        return current().extract_data(&zip_);
     }
 };
 

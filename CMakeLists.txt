@@ -48,13 +48,28 @@ if (NOT raylib_FOUND)
     endif ()
 endif ()
 
-find_package(LibArchive REQUIRED)
+find_package(miniz QUIET)
+if (NOT miniz_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+            miniz
+            DOWNLOAD_EXTRACT_TIMESTAMP OFF
+            GIT_REPOSITORY https://github.com/richgel999/miniz
+    )
+    FetchContent_GetProperties(miniz)
+    if (NOT miniz_POPULATED)
+        set(FETCHCONTENT_QUIET NO)
+        FetchContent_MakeAvailable(miniz)
+    endif ()
+endif ()
+
+#find_package(LibArchive REQUIRED)
 
 set(C_SOURCES include/tinyfiledialogs/tinyfiledialogs.c
         include/raylib/clay_renderer_raylib.c
-        include/raylib/rres_impl.c
-        include/lz4/lz4.c
-        include/raylib/rres-raylib_impl.c
+        #        include/raylib/rres_impl.c
+        #        include/lz4/lz4.c
+        #        include/raylib/rres-raylib_impl.c
         ${GENERATED_EMBED_SOURCE})
 
 set(CXX_SOURCES main.cpp
@@ -76,12 +91,12 @@ if (MSVC)
 endif ()
 
 target_include_directories(konduit_installer PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(konduit_installer PUBLIC raylib LibArchive::LibArchive)
+target_link_libraries(konduit_installer PUBLIC raylib miniz)
 
 if (WIN32)
     target_link_libraries(konduit_installer PRIVATE Comdlg32.lib Ole32.lib user32.lib gdi32.lib)
     if (NOT MSVC)
-        target_link_options(konduit_installer PRIVATE -static)
+        target_link_options(konduit_installer PRIVATE -static -static-libgcc -static-libstdc++ -gdwarf-2)
     endif ()
 endif ()
 
