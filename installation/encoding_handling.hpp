@@ -19,168 +19,60 @@ namespace encoding {
 using std::nullopt;
 using std::optional;
 
-struct ArchiveEntry {
-    std::string path;
-    uint64_t size;
+struct ZipFileInfo {
+    std::string filename;
     uint64_t uncompressed_size;
-    uint32_t file_index;
-
-    std::vector<uint8_t> extract_data(mz_zip_archive* zip) const {
-        if (uncompressed_size == 0)
-            return {};
-
-        std::vector<uint8_t> data(uncompressed_size);
-
-        if (!mz_zip_reader_extract_to_mem(
-                zip, file_index, data.data(), uncompressed_size, 0
-            )) {
-            return {};
-        }
-
-        return data;
-    }
+    uint64_t compressed_size;
+    uint32_t crc32;
+    bool is_directory;
+    uint16_t method;
+    mz_zip_archive_file_stat mz_stat;
 };
 
-// prototype for streaming interface for the archives
-class ArchiveIterator {
-   private:
-    mz_zip_archive zip_;
-    uint32_t current_index_;
-    uint32_t total_files_;
-    bool valid_;
+struct ZipReader {
+    mz_zip_archive archive;
+    std::vector<uint8_t> file_buffer;
+    bool owns_buffer;
+    uint32_t current_index;
+    uint32_t total_files;
 
-    void advance_to_next_file() {
-        while (current_index_ < total_files_) {
-            mz_zip_archive_file_stat file_stat;
-            if (mz_zip_reader_file_stat(&zip_, current_index_, &file_stat)) {
-                if (!mz_zip_reader_is_file_a_directory(&zip_, current_index_)) {
-                    return;
-                }
-            }
-            current_index_++;
-        }
-        valid_ = false;
-    }
-
-   public:
-    static optional<ArchiveIterator>
-    from_memory(const unsigned char* buffer, size_t size) {
-        ArchiveIterator iter;
-
-        memset(&iter.zip_, 0, sizeof(iter.zip_));
-
-        // Use the buffer directly - no need to copy since caller manages
-        // lifetime
-        if (!mz_zip_reader_init_mem(&iter.zip_, buffer, size, 0)) {
-            return nullopt;
-        }
-
-        iter.total_files_ = mz_zip_reader_get_num_files(&iter.zip_);
-        iter.current_index_ = 0;
-        iter.valid_ = iter.total_files_ > 0;
-
-        if (iter.valid_) {
-            iter.advance_to_next_file();
-        }
-
-        return iter.valid_ ? optional<ArchiveIterator>{std::move(iter)}
-                           : nullopt;
-    }
-
-    static optional<ArchiveIterator> from_file(const std::string& path) {
-        ArchiveIterator iter;
-
-        memset(&iter.zip_, 0, sizeof(iter.zip_));
-
-        if (!mz_zip_reader_init_file(&iter.zip_, path.c_str(), 0)) {
-            return nullopt;
-        }
-
-        iter.total_files_ = mz_zip_reader_get_num_files(&iter.zip_);
-        iter.current_index_ = 0;
-        iter.valid_ = iter.total_files_ > 0;
-
-        if (iter.valid_) {
-            iter.advance_to_next_file();
-        }
-
-        return iter.valid_ ? optional<ArchiveIterator>{std::move(iter)}
-                           : nullopt;
-    }
-
-   private:
-    ArchiveIterator() : current_index_(0), total_files_(0), valid_(false) {
-        memset(&zip_, 0, sizeof(zip_));
-    }
-
-   public:
-    ~ArchiveIterator() {
-        if (zip_.m_pState) {
-            mz_zip_reader_end(&zip_);
-        }
-    }
-
-    ArchiveIterator(const ArchiveIterator&) = delete;
-    ArchiveIterator& operator=(const ArchiveIterator&) = delete;
-
-    ArchiveIterator(ArchiveIterator&& other) noexcept
-        : zip_(other.zip_),
-          current_index_(other.current_index_),
-          total_files_(other.total_files_),
-          valid_(other.valid_) {
-        other.zip_.m_pState = nullptr;
-        other.valid_ = false;
-    }
-
-    ArchiveIterator& operator=(ArchiveIterator&& other) noexcept {
-        if (this != &other) {
-            if (zip_.m_pState) {
-                mz_zip_reader_end(&zip_);
-            }
-            zip_ = other.zip_;
-            current_index_ = other.current_index_;
-            total_files_ = other.total_files_;
-            valid_ = other.valid_;
-            other.zip_.m_pState = nullptr;
-            other.valid_ = false;
-        }
-        return *this;
-    }
-    [[nodiscard]] bool has_next() const { return valid_; }
-
-    [[nodiscard]] ArchiveEntry current() const {
-        if (!valid_)
-            return {"", 0, 0, 0};
-
-        mz_zip_archive_file_stat file_stat;
-        if (!mz_zip_reader_file_stat(
-                const_cast<mz_zip_archive*>(&zip_), current_index_, &file_stat
-            )) {
-            return {"", 0, 0, 0};
-        }
-
-        return {
-            file_stat.m_filename,
-            file_stat.m_comp_size,
-            file_stat.m_uncomp_size,
-            current_index_
-        };
-    }
-
-    void next() {
-        if (!valid_)
-            return;
-
-        current_index_++;
-        advance_to_next_file();
-    }
-
-    std::vector<uint8_t> extract_current() {
-        if (!valid_)
-            return {};
-        return current().extract_data(&zip_);
-    }
+    ZipReader();
+    ~ZipReader();
+    ZipReader(const ZipReader&) = delete;
+    ZipReader& operator=(const ZipReader&) = delete;
 };
+
+struct ZipIterator {
+    ZipReader* reader;
+    uint32_t index;
+
+    ZipIterator(ZipReader* r, uint32_t idx);
+    ZipIterator& operator++();
+    bool operator!=(const ZipIterator& other) const;
+    std::optional<ZipFileInfo> operator*() const;
+};
+
+std::unique_ptr<ZipReader>
+zip_init_from_buffer(const unsigned char* buffer, size_t size);
+std::unique_ptr<ZipReader> zip_init_from_file(std::string_view filepath);
+
+std::optional<ZipFileInfo> zip_get_file_info(ZipReader* reader, uint32_t index);
+std::optional<ZipFileInfo> zip_current_file_info(ZipReader* reader);
+bool zip_next_file(ZipReader* reader);
+void zip_reset(ZipReader* reader);
+bool zip_has_more_files(ZipReader* reader);
+uint32_t zip_get_file_count(ZipReader* reader);
+
+std::optional<std::vector<uint8_t>> zip_extract_current_file(ZipReader* reader);
+std::optional<std::vector<uint8_t>>
+zip_extract_file_by_index(ZipReader* reader, uint32_t index);
+std::optional<std::vector<uint8_t>>
+zip_extract_file_by_name(ZipReader* reader, std::string_view filename);
+std::optional<uint32_t>
+zip_find_file_index(ZipReader* reader, std::string_view filename);
+
+ZipIterator begin(ZipReader* reader);
+ZipIterator end(ZipReader* reader);
 
 struct LoadedData {
     std::map<std::string, std::vector<uint8_t>> data;
