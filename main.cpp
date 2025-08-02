@@ -206,7 +206,7 @@ void installer_ui() {
                     }
                     if (button("Next")) {
                         auto t = encoding::load_resource_from_memory(
-                            roboto_data, roboto_size
+                            gxogupjw4amjyxv_data, gxogupjw4amjyxv_size
                         );
                         data.show_popup = true;
                     }

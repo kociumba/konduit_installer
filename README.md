@@ -4,7 +4,8 @@
 
 general:
 
-- cmake (with ninja or make)
+- cmake
+- internet connection to fetch raylib and miniz (or those libs available in the env)
 
 compiler:
 
@@ -15,7 +16,7 @@ compiler:
     - clang 19+
 - windows:
     - mingw64/gcc 15+
-    - msvc compiles but produces broken binaries
+    - msvc *NOT SUPPORTED* (lacks support for C23 `#embed`)
 
 libs:
 
@@ -28,5 +29,4 @@ libs:
 - mac-os:
     - xcode env (recommended but might work with system default)
 - windows:
-    - mingw64 env (if using gcc)
-    - msvc
+    - mingw64 env (recommend using msys2)

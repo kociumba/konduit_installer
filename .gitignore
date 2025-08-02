@@ -45,3 +45,5 @@
 /cmake-*
 embed.c
 embed.h
+embedded_files*
+*.cache
