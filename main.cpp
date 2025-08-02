@@ -20,6 +20,8 @@ bool should_close = false;
 bool debug = false;
 unsigned int window_flags = FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT |
                             FLAG_WINDOW_TRANSPARENT | FLAG_VSYNC_HINT;
+Image logo_img;
+Texture2D logo;
 
 struct Install_data {
     std::string input_buffer;
@@ -115,12 +117,24 @@ void installer_ui() {
          .cornerRadius = {10, 10, 10, 10},
          .border = {.color = MAIN_COLOR, .width = {1, 1, 1, 1}}},
         [&] {
-            clay.textElement(
-                "Installer",
-                {.textColor = K_WHITE,
-                 .fontId = FONT_SIZE_24_ID,
-                 .fontSize = 24,
-                 .textAlignment = CLAY_TEXT_ALIGN_CENTER}
+            clay.element(
+                {.layout =
+                     {.childGap = 10, .layoutDirection = CLAY_LEFT_TO_RIGHT}},
+                [&] {
+                    clay.element(
+                        {.layout = {.sizing = {.width = 22, .height = 22}},
+                         .image = {
+                             .imageData = &logo,
+                         }}
+                    );
+                    clay.textElement(
+                        "Installer",
+                        {.textColor = K_WHITE,
+                         .fontId = FONT_SIZE_24_ID,
+                         .fontSize = 24,
+                         .textAlignment = CLAY_TEXT_ALIGN_CENTER}
+                    );
+                }
             );
 
             clay.element(
@@ -283,6 +297,10 @@ int main() {
     );
     GenTextureMipmaps(&fonts[2].texture);
     SetTextureFilter(fonts[2].texture, TEXTURE_FILTER_TRILINEAR);
+
+    logo_img =
+        LoadImageFromMemory(test_logo_ext, test_logo_data, test_logo_size);
+    logo = LoadTextureFromImage(logo_img);
 
     //    std::printf("eye: U+%04X\n", codepoint(ICON_FA_EYE));
 

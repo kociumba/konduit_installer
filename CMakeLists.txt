@@ -11,17 +11,33 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(BUILD_SHARED_LIBS OFF)
 
 # resource embedding
-set(GENERATED_EMBED_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/embed.h")
-set(GENERATED_EMBED_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/embed.c")
+set(GEN_HDR "${CMAKE_CURRENT_SOURCE_DIR}/embed.h")
+set(GEN_SRC "${CMAKE_CURRENT_SOURCE_DIR}/embed.c")
 
-add_custom_target(generate_embed ALL
+execute_process(
+        COMMAND ${CMAKE_COMMAND}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/generate_embed_files.cmake"
+        RESULT_VARIABLE _res
+        OUTPUT_QUIET
+        ERROR_VARIABLE _err
+)
+if (NOT _res EQUAL 0)
+    message(FATAL_ERROR "Embed generator failed at configure:\n${_err}")
+endif ()
+
+add_custom_command(
+        OUTPUT "${GEN_HDR}" "${GEN_SRC}"
         COMMAND ${CMAKE_COMMAND}
         -D CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
         -D CMAKE_CURRENT_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
-        -P ${CMAKE_CURRENT_SOURCE_DIR}/generate_embed_files.cmake
-        BYPRODUCTS ${GENERATED_EMBED_HEADER} ${GENERATED_EMBED_SOURCE}
-        COMMENT "Generating embed.c and embed.h from assets..."
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/generate_embed_files.cmake"
+        COMMENT "Regenerating embed.h/.c from assets…"
+        VERBATIM
+)
+
+add_custom_target(
+        generate_embed
+        DEPENDS "${GEN_HDR}" "${GEN_SRC}"
 )
 
 set(RAYLIB_VERSION 5.5)
@@ -58,14 +74,9 @@ if (NOT miniz_FOUND)
     endif ()
 endif ()
 
-#find_package(LibArchive REQUIRED)
-
 set(C_SOURCES include/tinyfiledialogs/tinyfiledialogs.c
         include/raylib/clay_renderer_raylib.c
-        #        include/raylib/rres_impl.c
-        #        include/lz4/lz4.c
-        #        include/raylib/rres-raylib_impl.c
-        ${GENERATED_EMBED_SOURCE})
+        ${GEN_SRC})
 
 set(CXX_SOURCES main.cpp
         main.hpp
@@ -78,7 +89,8 @@ set(CXX_SOURCES main.cpp
         installation/encoding_handling.hpp)
 
 add_executable(konduit_installer ${C_SOURCES} ${CXX_SOURCES})
-add_dependencies(konduit_installer generate_embed)
+add_dependencies(konduit_installer
+        generate_embed)
 
 set_source_files_properties(${C_SOURCES} WIN32 PROPERTIES LANGUAGE C)
 if (MSVC)
